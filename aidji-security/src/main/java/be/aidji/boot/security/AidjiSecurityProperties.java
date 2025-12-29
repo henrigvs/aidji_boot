@@ -12,15 +12,21 @@ import java.util.List;
  * <pre>{@code
  * aidji:
  *   security:
- *     json-web-token:
- *       encryption-key: "abcde"
- *       validity-duration-in-seconds: 600
+ *     jwt:
+ *       public-key-url: https://auth.example.com/.well-known/jwks.json
+ *       public-key-cache-ttl-seconds: 3600
+ *       cookie-based: true
+ *       cookie-name: jwt-security-principal
+ *     security:
+ *       public-paths:
+ *         - /api/auth/**
+ *         - /actuator/health
  * }</pre>
  */
 @ConfigurationProperties(prefix = "aidji.security")
 public record AidjiSecurityProperties(
-        JwtProperties jsonWebTokenProperties,
-        SecurityProperties securityProperties
+        JwtProperties jwt,
+        SecurityProperties security
 ) {
 
     public record JwtProperties(
@@ -38,6 +44,9 @@ public record AidjiSecurityProperties(
             String cookieName
     ) {
         public JwtProperties {
+            if (publicKeyUrl == null || publicKeyUrl.isBlank()) {
+                throw new IllegalArgumentException("aidji.security.jwt.public-key-url is required");
+            }
             if (publicKeyCacheTtlSeconds == null) {
                 publicKeyCacheTtlSeconds = 3600L;
             }

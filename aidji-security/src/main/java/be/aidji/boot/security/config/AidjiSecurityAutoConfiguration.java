@@ -45,7 +45,7 @@ public class AidjiSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
@@ -55,7 +55,7 @@ public class AidjiSecurityAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "aidji.security.jwt.enabled", havingValue = "true", matchIfMissing = true)
     public JwtTokenVerificator jwtTokenVerificator(AidjiSecurityProperties properties) {
-        return new JwtTokenVerificator(properties.jsonWebTokenProperties());
+        return new JwtTokenVerificator(properties.jwt());
     }
 
     @Bean
@@ -73,7 +73,7 @@ public class AidjiSecurityAutoConfiguration {
             );
         });
 
-        return new JwtAuthenticationFilter(jwtTokenVerificator, userDetailsService, properties.jsonWebTokenProperties(), properties.securityProperties());
+        return new JwtAuthenticationFilter(jwtTokenVerificator, userDetailsService, properties.jwt(), properties.security());
     }
 
     // ========== Error Handlers ==========
@@ -121,7 +121,7 @@ public class AidjiSecurityAutoConfiguration {
         // Authorization rules
         http.authorizeHttpRequests(auth -> {
             // Public paths
-            properties.securityProperties().publicPaths().forEach(path ->
+            properties.security().publicPaths().forEach(path ->
                     auth.requestMatchers(path).permitAll()
             );
             // Error endpoint always public

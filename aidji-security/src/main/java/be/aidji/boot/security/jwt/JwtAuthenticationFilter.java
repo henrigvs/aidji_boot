@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -46,6 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final AidjiSecurityProperties.JwtProperties jwtProperties;
     private final AidjiSecurityProperties.SecurityProperties securityProperties;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationFilter(
             JwtTokenVerificator jwtTokenVerificator,
@@ -178,14 +180,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         return securityProperties.publicPaths().stream()
-                .anyMatch(pattern -> pathMatches(pattern, path));
-    }
-
-    private boolean pathMatches(String pattern, String path) {
-        if (pattern.endsWith("/**")) {
-            String prefix = pattern.substring(0, pattern.length() - 3);
-            return path.startsWith(prefix);
-        }
-        return pattern.equals(path);
+                .anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 }
