@@ -150,7 +150,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      *   <li>List of objects: [{"authority": "ROLE_USER"}]</li>
      * </ul>
      */
-    @SuppressWarnings("unchecked")
     private Collection<SimpleGrantedAuthority> extractAuthorities(Claims claims) {
         List<?> authoritiesClaim = claims.get("authorities", List.class);
 

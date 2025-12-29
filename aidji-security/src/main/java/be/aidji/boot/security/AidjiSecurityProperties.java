@@ -1,7 +1,6 @@
 package be.aidji.boot.security;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.security.autoconfigure.SecurityProperties;
 
 import java.util.List;
 

@@ -191,7 +191,7 @@ public class JwtTokenVerificator {
         List<Jwk> keys = new ArrayList<>();
 
         // Pattern to match each key object in the "keys" array
-        Pattern keyPattern = Pattern.compile("\\{[^{}]*\"kty\"[^{}]*\\}");
+        Pattern keyPattern = Pattern.compile("\\{[^{}]*\"kty\"[^{}]*}");
         Matcher matcher = keyPattern.matcher(json);
 
         while (matcher.find()) {

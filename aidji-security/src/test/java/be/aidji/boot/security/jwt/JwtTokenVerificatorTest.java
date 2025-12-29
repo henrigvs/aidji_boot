@@ -47,7 +47,7 @@ class JwtTokenVerificatorTest {
 
     private ClientAndServer mockServer;
     private KeyPair keyPair;
-    private String kid = "test-key-1";
+    private final String kid = "test-key-1";
     private JwtTokenVerificator verificator;
 
     @BeforeEach
@@ -101,7 +101,7 @@ class JwtTokenVerificatorTest {
         @DisplayName("should throw SecurityException for expired token")
         void shouldThrowExceptionForExpiredToken() {
             // Given
-            String token = buildExpiredToken(keyPair.getPrivate(), kid, "testuser");
+            String token = buildExpiredToken(keyPair.getPrivate());
 
             // When / Then
             assertThatThrownBy(() -> verificator.validateToken(token))
@@ -186,7 +186,7 @@ class JwtTokenVerificatorTest {
         @DisplayName("should return false for expired token")
         void shouldReturnFalseForExpiredToken() {
             // Given
-            String token = buildExpiredToken(keyPair.getPrivate(), kid, "testuser");
+            String token = buildExpiredToken(keyPair.getPrivate());
 
             // When
             boolean valid = verificator.isValid(token);
@@ -317,12 +317,12 @@ class JwtTokenVerificatorTest {
                 .compact();
     }
 
-    private String buildExpiredToken(PrivateKey privateKey, String kid, String subject) {
+    private String buildExpiredToken(PrivateKey privateKey) {
         return Jwts.builder()
                 .header()
-                .keyId(kid)
+                .keyId("test-key-1")
                 .and()
-                .subject(subject)
+                .subject("testuser")
                 .issuedAt(Date.from(Instant.now().minusSeconds(7200)))
                 .expiration(Date.from(Instant.now().minusSeconds(3600)))
                 .signWith(privateKey, Jwts.SIG.RS256)
