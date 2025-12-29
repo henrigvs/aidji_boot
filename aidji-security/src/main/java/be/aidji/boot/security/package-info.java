@@ -20,8 +20,8 @@
  * <p>This module provides a pre-configured, opinionated security setup for Spring Boot applications:</p>
  *
  * <ul>
- *   <li><b>JWT Authentication</b> - Stateless authentication via HTTP-only cookies or Authorization header
- *       ({@link be.aidji.boot.security.jwt})</li>
+ *   <li><b>JWT Authentication</b> - Stateless authentication via HTTP-only cookies or Authorization header,
+ *       with JWKS support for external Identity Providers ({@link be.aidji.boot.security.jwt})</li>
  *   <li><b>Autoconfiguration</b> - Zero-config security with sensible defaults
  *       ({@link be.aidji.boot.security.config})</li>
  *   <li><b>Error Handlers</b> - Standardized JSON responses for 401/403 errors
@@ -34,7 +34,10 @@
  * aidji:
  *   security:
  *     jwt:
- *       secret-key: "your-base64-encoded-secret-key"
+ *       public-key-url: https://auth.example.com/.well-known/jwks.json
+ *       public-key-cache-ttl-seconds: 3600
+ *       cookie-based: true
+ *       cookie-name: "auth-token"
  *       public-paths:
  *         - /api/auth/**
  *         - /api/public/**
@@ -42,13 +45,22 @@
  *
  * <h2>Features</h2>
  * <ul>
- *   <li>JWT token generation and validation</li>
+ *   <li>JWT token validation via JWKS (RS256)</li>
+ *   <li>Automatic public key caching and rotation</li>
  *   <li>Cookie-based or header-based authentication</li>
  *   <li>Configurable public paths (no auth required)</li>
- *   <li>CORS configuration</li>
  *   <li>CSRF disabled (stateless)</li>
  *   <li>Method-level security (@Secured, @RolesAllowed)</li>
- *   <li>BCrypt password encoding</li>
+ *   <li>Standardized error responses using {@link be.aidji.boot.core.dto.ApiResponse}</li>
+ * </ul>
+ *
+ * <h2>Supported Identity Providers</h2>
+ * <ul>
+ *   <li>Keycloak</li>
+ *   <li>Auth0</li>
+ *   <li>Okta</li>
+ *   <li>Azure AD</li>
+ *   <li>Any OIDC-compliant provider with JWKS endpoint</li>
  * </ul>
  *
  * <h2>Customization</h2>
@@ -63,9 +75,17 @@
  * }
  * }</pre>
  *
+ * <h2>Required Beans</h2>
+ * <p>Your application must provide:</p>
+ * <ul>
+ *   <li>{@link org.springframework.security.core.userdetails.UserDetailsService} -
+ *       for loading user details during authentication</li>
+ * </ul>
+ *
  * @see be.aidji.boot.security.config.AidjiSecurityAutoConfiguration
  * @see be.aidji.boot.security.config.AidjiSecurityCustomizer
- * @see be.aidji.boot.security.jwt.JwtTokenProvider
+ * @see be.aidji.boot.security.jwt.JwtTokenVerificator
+ * @see be.aidji.boot.security.jwt.JwtAuthenticationFilter
  * @see be.aidji.boot.security.AidjiSecurityProperties
  */
 package be.aidji.boot.security;

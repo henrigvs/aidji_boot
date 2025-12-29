@@ -4,7 +4,7 @@ import be.aidji.boot.security.AidjiSecurityProperties;
 import be.aidji.boot.security.handler.AidjiAccessDeniedHandler;
 import be.aidji.boot.security.handler.AidjiAuthenticationEntryPoint;
 import be.aidji.boot.security.jwt.JwtAuthenticationFilter;
-import be.aidji.boot.security.jwt.JwtTokenProvider;
+import be.aidji.boot.security.jwt.JwtTokenVerificator;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -25,9 +25,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @AutoConfiguration
 @EnableConfigurationProperties(AidjiSecurityProperties.class)
@@ -56,15 +54,15 @@ public class AidjiSecurityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "aidji.security.jwt.enabled", havingValue = "true", matchIfMissing = true)
-    public JwtTokenProvider jwtTokenProvider(AidjiSecurityProperties properties) {
-        return new JwtTokenProvider(properties.jsonWebTokenProperties());
+    public JwtTokenVerificator jwtTokenVerificator(AidjiSecurityProperties properties) {
+        return new JwtTokenVerificator(properties.jsonWebTokenProperties());
     }
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "aidji.security.jwt.enabled", havingValue = "true", matchIfMissing = true)
     public JwtAuthenticationFilter jwtAuthenticationFilter(
-            JwtTokenProvider jwtTokenProvider,
+            JwtTokenVerificator jwtTokenVerificator,
             ObjectProvider<UserDetailsService> userDetailsServiceProvider,
             AidjiSecurityProperties properties) {
 
@@ -75,7 +73,7 @@ public class AidjiSecurityAutoConfiguration {
             );
         });
 
-        return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService, properties.jsonWebTokenProperties());
+        return new JwtAuthenticationFilter(jwtTokenVerificator, userDetailsService, properties.jsonWebTokenProperties(), properties.securityProperties());
     }
 
     // ========== Error Handlers ==========
@@ -123,7 +121,7 @@ public class AidjiSecurityAutoConfiguration {
         // Authorization rules
         http.authorizeHttpRequests(auth -> {
             // Public paths
-            properties.jsonWebTokenProperties().publicPaths().forEach(path ->
+            properties.securityProperties().publicPaths().forEach(path ->
                     auth.requestMatchers(path).permitAll()
             );
             // Error endpoint always public

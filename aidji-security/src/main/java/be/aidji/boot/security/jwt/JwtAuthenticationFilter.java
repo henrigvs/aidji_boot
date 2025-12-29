@@ -33,17 +33,8 @@ import java.util.Optional;
  *   <li><b>Header-based</b>: Token in Authorization header (Bearer scheme)</li>
  * </ul>
  *
- * <p>Authentication Flow:</p>
- * <ol>
- *   <li>Extract JWT token from cookie or Authorization header</li>
- *   <li>Validate the token and extract claims</li>
- *   <li>Load user details and verify token validity</li>
- *   <li>Extract authorities from JWT claims</li>
- *   <li>Create authentication token and set in SecurityContext</li>
- * </ol>
- *
- * @see JwtTokenProvider
- * @see AidjiSecurityProperties.JsonWebTokenProperties
+ * @see JwtTokenVerificator
+ * @see AidjiSecurityProperties.JwtProperties
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -51,24 +42,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenVerificator jwtTokenVerificator;
     private final UserDetailsService userDetailsService;
-    private final AidjiSecurityProperties.JsonWebTokenProperties jwtProperties;
+    private final AidjiSecurityProperties.JwtProperties jwtProperties;
+    private final AidjiSecurityProperties.SecurityProperties securityProperties;
 
     public JwtAuthenticationFilter(
-            JwtTokenProvider jwtTokenProvider,
+            JwtTokenVerificator jwtTokenVerificator,
             UserDetailsService userDetailsService,
-            AidjiSecurityProperties.JsonWebTokenProperties jwtProperties) {
-        this.jwtTokenProvider = jwtTokenProvider;
+            AidjiSecurityProperties.JwtProperties jwtProperties, AidjiSecurityProperties.SecurityProperties securityProperties) {
+        this.jwtTokenVerificator = jwtTokenVerificator;
         this.userDetailsService = userDetailsService;
         this.jwtProperties = jwtProperties;
+        this.securityProperties = securityProperties;
     }
 
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         try {
             extractToken(request)
@@ -88,7 +81,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * Extracts JWT token from a cookie or Authorization header based on configuration.
      */
     private Optional<String> extractToken(HttpServletRequest request) {
-        // Try cookie first if cookie-based auth is enabled
         if (jwtProperties.cookieBased()) {
             Optional<String> cookieToken = extractTokenFromCookie(request);
             if (cookieToken.isPresent()) {
@@ -96,7 +88,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // Fallback to Authorization header
         return extractTokenFromHeader(request);
     }
 
@@ -126,7 +117,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * Validates token and sets up Spring Security context.
      */
     private void authenticateToken(String token, HttpServletRequest request) {
-        Claims claims = jwtTokenProvider.extractAllClaims(token);
+        Claims claims = jwtTokenVerificator.validateToken(token);
         String username = claims.getSubject();
 
         if (username == null) {
@@ -135,20 +126,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        Collection<SimpleGrantedAuthority> authorities = extractAuthorities(claims);
 
-        if (jwtTokenProvider.isTokenValid(token, userDetails)) {
-            Collection<SimpleGrantedAuthority> authorities = extractAuthorities(claims);
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                authorities
+        );
+        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    authorities
-            );
-            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-            SecurityContextHolder.getContext().setAuthentication(authToken);
-            log.debug("Authentication successful for user: {}", username);
-        }
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+        log.debug("Authentication successful for user: {}", username);
     }
 
     /**
@@ -160,6 +148,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      *   <li>List of objects: [{"authority": "ROLE_USER"}]</li>
      * </ul>
      */
+    @SuppressWarnings("unchecked")
     private Collection<SimpleGrantedAuthority> extractAuthorities(Claims claims) {
         List<?> authoritiesClaim = claims.get("authorities", List.class);
 
@@ -185,13 +174,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         throw new IllegalArgumentException("Invalid authority format: " + authority);
     }
 
-    /**
-     * Skip filter for paths that don't require authentication.
-     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return jwtProperties.publicPaths().stream()
+        return securityProperties.publicPaths().stream()
                 .anyMatch(pattern -> pathMatches(pattern, path));
     }
 
