@@ -1,14 +1,18 @@
 # Aidji Boot
 
-Opinionated Spring Boot 4 framework for rapid application development.
+**Opinionated Spring Boot 4 framework for rapid REST API development.**
+
+Aidji Boot provides pre-configured, production-ready modules that follow the "convention over configuration" philosophy. Built with Java 25 and Spring Boot 4, it eliminates boilerplate while maintaining flexibility through auto-configuration.
 
 ## Features
 
-- 🚀 **Convention over Configuration** - Works out of the box with zero config
-- 🔒 **Security** - JWT authentication with HttpOnly cookies (coming soon)
-- 📊 **Observability** - Prometheus, Micrometer, distributed tracing (coming soon)
-- 🌐 **API Gateway** - Pre-configured Spring Cloud Gateway (coming soon)
-- ✨ **Modern Java** - Built for Java 25 with preview features
+- 🚀 **Convention over Configuration** - Works out of the box with sensible defaults
+- 🔒 **JWT Security** - Cookie-based or header-based authentication with auto-configuration
+- 🌐 **Web Utilities** - RestClient, global exception handling, CORS, request logging
+- 🎯 **Standardized APIs** - Consistent error responses with `ApiResponse` wrapper
+- 🛡️ **Type-Safe Config** - Java records for configuration properties
+- ✨ **Modern Java** - Built for Java 25 with preview features enabled
+- 📦 **Modular Design** - Pick only what you need, zero circular dependencies
 
 ## Requirements
 
@@ -52,6 +56,14 @@ Then add the modules you need:
         <groupId>be.aidji.boot</groupId>
         <artifactId>aidji-core</artifactId>
     </dependency>
+    <dependency>
+        <groupId>be.aidji.boot</groupId>
+        <artifactId>aidji-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>be.aidji.boot</groupId>
+        <artifactId>aidji-security</artifactId>
+    </dependency>
 </dependencies>
 ```
 
@@ -59,13 +71,13 @@ Then add the modules you need:
 
 | Module | Description | Status |
 |--------|-------------|--------|
-| `aidji-bom` | Bill of Materials | ✅ Available |
-| `aidji-parent` | Parent POM with build config | ✅ Available |
-| `aidji-core` | Exceptions, DTOs, utilities | ✅ Available |
-| `aidji-security` | JWT, OAuth2, RBAC | 🚧 Planned |
-| `aidji-web` | RestClient, error handling | 🚧 Planned |
-| `aidji-observability` | Metrics, tracing | 🚧 Planned |
-| `aidji-gateway` | API Gateway | 🚧 Planned |
+| `aidji-bom` | Bill of Materials for dependency management | ✅ Available |
+| `aidji-parent` | Parent POM with build config and plugins | ✅ Available |
+| `aidji-core` | Core utilities, exceptions hierarchy, DTOs | ✅ Available |
+| `aidji-web` | RestClient, global exception handler, CORS, request logging | ✅ Available |
+| `aidji-security` | JWT authentication (cookie/header), auto-configuration | ✅ Available |
+| `aidji-observability` | Metrics, distributed tracing, Prometheus | 🚧 Planned |
+| `aidji-gateway` | Pre-configured API Gateway | 🚧 Planned |
 
 ## Usage Examples
 
@@ -80,12 +92,12 @@ public enum UserErrorCode implements ErrorCode {
     // constructor and getters...
 }
 
-// Throw business exceptions
-throw new BusinessException(UserErrorCode.USER_NOT_FOUND, 
+// Throw functional exceptions
+throw new FunctionalException(UserErrorCode.USER_NOT_FOUND, 
     "User with id " + userId + " not found");
 
 // Or use the fluent builder
-throw BusinessException.builder(UserErrorCode.EMAIL_TAKEN)
+throw FunctionalException.builder(UserErrorCode.EMAIL_TAKEN)
     .message("Email %s is already registered", email)
     .context("email", email)
     .build();
