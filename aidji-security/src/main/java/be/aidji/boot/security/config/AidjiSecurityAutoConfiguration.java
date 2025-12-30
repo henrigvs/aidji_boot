@@ -62,7 +62,7 @@ public class AidjiSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) {
         return config.getAuthenticationManager();
     }
 
@@ -124,7 +124,7 @@ public class AidjiSecurityAutoConfiguration {
             AidjiAccessDeniedHandler accessDeniedHandler,
             AidjiAuthenticationEntryPoint authenticationEntryPoint,
             ObjectProvider<CorsConfigurationSource> corsConfigurationSource,
-            ObjectProvider<AidjiSecurityCustomizer> customizers) throws Exception {
+            ObjectProvider<AidjiSecurityCustomizer> customizers) {
 
         String[] whitelist = properties.security().publicPaths().toArray(String[]::new);
 
