@@ -5,6 +5,8 @@ import be.aidji.boot.security.handler.AidjiAccessDeniedHandler;
 import be.aidji.boot.security.handler.AidjiAuthenticationEntryPoint;
 import be.aidji.boot.security.jwt.JwtAuthenticationFilter;
 import be.aidji.boot.security.jwt.JwtTokenVerificator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -19,6 +21,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,6 +30,18 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+/**
+ * Auto-configuration for Aidji Security.
+ * <p>
+ * Provides a pre-configured, opinionated security setup with:
+ * <ul>
+ *   <li>JWT-based stateless authentication (cookie or header)</li>
+ *   <li>CORS configuration (uses aidji-web if available)</li>
+ *   <li>CSRF disabled (stateless)</li>
+ *   <li>Custom error handlers</li>
+ *   <li>Method-level security enabled</li>
+ * </ul>
+ */
 @AutoConfiguration
 @EnableConfigurationProperties(AidjiSecurityProperties.class)
 @ConditionalOnClass(SecurityFilterChain.class)
@@ -34,6 +49,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @EnableWebSecurity
 @EnableMethodSecurity(securedEnabled = true, jsr250Enabled = true)
 public class AidjiSecurityAutoConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(AidjiSecurityAutoConfiguration.class);
 
     // ========== Core Beans ==========
 
@@ -45,7 +62,7 @@ public class AidjiSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
@@ -73,7 +90,12 @@ public class AidjiSecurityAutoConfiguration {
             );
         });
 
-        return new JwtAuthenticationFilter(jwtTokenVerificator, userDetailsService, properties.jwt(), properties.security());
+        return new JwtAuthenticationFilter(
+                jwtTokenVerificator,
+                userDetailsService,
+                properties.jwt(),
+                properties.security()
+        );
     }
 
     // ========== Error Handlers ==========
@@ -102,31 +124,32 @@ public class AidjiSecurityAutoConfiguration {
             AidjiAccessDeniedHandler accessDeniedHandler,
             AidjiAuthenticationEntryPoint authenticationEntryPoint,
             ObjectProvider<CorsConfigurationSource> corsConfigurationSource,
-            ObjectProvider<AidjiSecurityCustomizer> customizers) {
+            ObjectProvider<AidjiSecurityCustomizer> customizers) throws Exception {
+
+        String[] whitelist = properties.security().publicPaths().toArray(String[]::new);
+
+        log.info("Aidji Security initialized with {} public paths: {}", whitelist.length, String.join(", ", whitelist));
+        log.info("JWT cookie-based: {}, cookie name: {}", properties.jwt().cookieBased(), properties.jwt().cookieName());
 
         // Base configuration
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .anonymous(Customizer.withDefaults()) // Enable anonymous authentication for public paths
                 .exceptionHandling(ex -> ex
                         .accessDeniedHandler(accessDeniedHandler)
                         .authenticationEntryPoint(authenticationEntryPoint)
                 );
 
-        // CORS
+        // CORS - use aidji-web config if available
         corsConfigurationSource.ifAvailable(cors ->
                 http.cors(c -> c.configurationSource(cors))
         );
 
         // Authorization rules
         http.authorizeHttpRequests(auth -> {
-            // Public paths
-            properties.security().publicPaths().forEach(path ->
-                    auth.requestMatchers(path).permitAll()
-            );
-            // Error endpoint always public
+            auth.requestMatchers(whitelist).permitAll();
             auth.requestMatchers("/error").permitAll();
-            // All others require authentication
             auth.anyRequest().authenticated();
         });
 

@@ -40,7 +40,9 @@ public record AidjiSecurityProperties(
             boolean cookieBased,
 
             // Cookie name when cookie-based auth is enabled
-            String cookieName
+            String cookieName,
+
+            Long maxAge
     ) {
         public JwtProperties {
             if (publicKeyUrl == null || publicKeyUrl.isBlank()) {
@@ -51,6 +53,9 @@ public record AidjiSecurityProperties(
             }
             if (cookieName == null || cookieName.isBlank()) {
                 cookieName = "jwt-security-principal";
+            }
+            if(maxAge == null) {
+                maxAge = 3600L;
             }
         }
     }

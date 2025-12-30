@@ -72,7 +72,8 @@ class JwtTokenVerificatorTest {
                 "http://localhost:" + port + "/.well-known/jwks.json",
                 3600L,
                 true,
-                "auth-token"
+                "auth-token",
+                600L
         );
 
         verificator = new JwtTokenVerificator(jwtProperties);
