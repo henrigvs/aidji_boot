@@ -21,7 +21,7 @@
 
     <groupId>be.aidji.boot</groupId>
     <artifactId>aidji-bom</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Aidji BOM</name>
@@ -90,5 +90,13 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/henrigvs/aidji_boot</url>
+        </repository>
+    </distributionManagement>
 
 </project>
