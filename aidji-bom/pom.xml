@@ -19,9 +19,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>be.aidji.framework</groupId>
+    <groupId>be.aidji.boot</groupId>
     <artifactId>aidji-bom</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Aidji BOM</name>
@@ -29,11 +29,10 @@
 
     <properties>
         <!-- Aidji versions -->
-        <aidji.version>0.1.0-SNAPSHOT</aidji.version>
+        <aidji.version>1.0.0</aidji.version>
 
         <!-- Spring versions -->
         <spring-boot.version>4.0.0</spring-boot.version>
-        <spring-cloud.version>2024.0.0</spring-cloud.version>
 
         <!-- Java version -->
         <java.version>25</java.version>
@@ -41,6 +40,7 @@
         <!-- Third-party versions -->
         <lombok.version>1.18.36</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
+        <feign.version>13.5</feign.version>
     </properties>
 
     <dependencyManagement>
@@ -54,20 +54,18 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Spring Cloud BOM -->
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
             <!-- Aidji modules -->
             <dependency>
-                <groupId>be.aidji.framework</groupId>
+                <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-core</artifactId>
                 <version>${aidji.version}</version>
+            </dependency>
+
+            <!-- Feign (standalone, sans Spring Cloud) -->
+            <dependency>
+                <groupId>io.github.openfeign</groupId>
+                <artifactId>feign-core</artifactId>
+                <version>${feign.version}</version>
             </dependency>
 
             <!-- Lombok -->
