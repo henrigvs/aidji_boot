@@ -121,7 +121,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                     var principal = new AidjiPrincipal(
                             username,
                             (String) claims.get("ipAddress"),
-                            (String) claims.get("aud"),
+                            extractAudience(claims),
                             claims.getIssuer(),
                             (String) claims.get("sessionId"),
                             extractAuthorities(claims),
@@ -143,6 +143,35 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         return authorities.stream()
                 .map(SimpleGrantedAuthority::new)
                 .toList();
+    }
+
+    /**
+     * Extracts the audience claim from JWT.
+     * <p>
+     * The JWT "aud" claim can be either:
+     * <ul>
+     *   <li>A single string value</li>
+     *   <li>An array/collection of strings</li>
+     * </ul>
+     * Returns the first audience if multiple are present, or null if none.
+     */
+    private String extractAudience(Claims claims) {
+        Object aud = claims.get("aud");
+
+        if (aud == null) {
+            return null;
+        }
+
+        if (aud instanceof String str) {
+            return str;
+        }
+
+        if (aud instanceof Collection<?> collection && !collection.isEmpty()) {
+            Object first = collection.iterator().next();
+            return first != null ? first.toString() : null;
+        }
+
+        return null;
     }
 
     /**
