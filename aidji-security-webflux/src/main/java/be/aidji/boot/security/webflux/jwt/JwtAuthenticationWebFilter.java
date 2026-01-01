@@ -73,7 +73,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                     log.debug("JWT authentication failed: {}", e.getMessage());
                     return chain.filter(exchange);
                 })
-                .switchIfEmpty(chain.filter(exchange));
+                .switchIfEmpty(Mono.defer(() -> chain.filter(exchange)));
     }
 
     /**
@@ -125,7 +125,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                             claims.getIssuer(),
                             (String) claims.get("sessionId"),
                             extractAuthorities(claims),
-                            (Map<String, Object>) claims.get("extraClaims")
+                            claims.get("extraClaims") != null ? (Map<String, Object>) claims.get("extraClaims") : null
                     );
 
                     var auth = new UsernamePasswordAuthenticationToken(
@@ -133,7 +133,6 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                             token,
                             principal.getAuthorities()
                     );
-                    auth.setAuthenticated(true);
 
                     return Mono.just(auth);
                 });
