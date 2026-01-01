@@ -15,15 +15,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import reactor.core.publisher.Mono;
 
 /**
  * Auto-configuration for Aidji Security WebFlux.
@@ -52,7 +57,7 @@ public class AidjiSecurityWebFluxAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
     // ========== JWT Beans ==========
@@ -69,19 +74,10 @@ public class AidjiSecurityWebFluxAutoConfiguration {
     @ConditionalOnProperty(name = "aidji.security.jwt.enabled", havingValue = "true", matchIfMissing = true)
     public JwtAuthenticationWebFilter jwtAuthenticationWebFilter(
             JwtTokenVerificator jwtTokenVerificator,
-            ObjectProvider<ReactiveUserDetailsService> userDetailsServiceProvider,
             AidjiSecurityProperties properties) {
-
-        ReactiveUserDetailsService userDetailsService = userDetailsServiceProvider.getIfAvailable(() -> {
-            throw new IllegalStateException(
-                    "No ReactiveUserDetailsService bean found. " +
-                            "Please define a ReactiveUserDetailsService bean in your application."
-            );
-        });
 
         return new JwtAuthenticationWebFilter(
                 jwtTokenVerificator,
-                userDetailsService,
                 properties.jwt(),
                 properties.security()
         );
@@ -99,6 +95,15 @@ public class AidjiSecurityWebFluxAutoConfiguration {
     @ConditionalOnMissingBean
     public AidjiServerAuthenticationEntryPoint aidjiServerAuthenticationEntryPoint() {
         return new AidjiServerAuthenticationEntryPoint();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ReactiveAuthenticationManager reactiveAuthenticationManager() {
+        return authentication -> {
+            authentication.setAuthenticated(true);
+            return Mono.just(authentication);
+        };
     }
 
     // ========== Security Filter Chain ==========
@@ -144,7 +149,8 @@ public class AidjiSecurityWebFluxAutoConfiguration {
         });
 
         // JWT Filter
-        http.addFilterAt(jwtAuthenticationWebFilter, SecurityWebFiltersOrder.AUTHENTICATION);
+        http.addFilterBefore(jwtAuthenticationWebFilter, SecurityWebFiltersOrder.AUTHENTICATION);
+        http.authenticationManager(reactiveAuthenticationManager());
 
         // Apply customizers
         customizers.orderedStream().forEach(customizer -> customizer.customize(http));

@@ -1,5 +1,6 @@
 package be.aidji.boot.security.webflux.jwt;
 
+import be.aidji.boot.security.webflux.AidjiPrincipal;
 import be.aidji.boot.security.webflux.AidjiSecurityProperties;
 import io.jsonwebtoken.Claims;
 import org.jspecify.annotations.NonNull;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
@@ -20,6 +22,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Reactive Spring Security filter that processes JWT authentication for incoming HTTP requests.
@@ -39,18 +42,15 @@ public class JwtAuthenticationWebFilter implements WebFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenVerificator jwtTokenVerificator;
-    private final ReactiveUserDetailsService userDetailsService;
     private final AidjiSecurityProperties.JwtProperties jwtProperties;
     private final AidjiSecurityProperties.SecurityProperties securityProperties;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationWebFilter(
             JwtTokenVerificator jwtTokenVerificator,
-            ReactiveUserDetailsService userDetailsService,
             AidjiSecurityProperties.JwtProperties jwtProperties,
             AidjiSecurityProperties.SecurityProperties securityProperties) {
         this.jwtTokenVerificator = jwtTokenVerificator;
-        this.userDetailsService = userDetailsService;
         this.jwtProperties = jwtProperties;
         this.securityProperties = securityProperties;
     }
@@ -110,32 +110,40 @@ public class JwtAuthenticationWebFilter implements WebFilter {
      * Validates token and creates Spring Security Authentication.
      */
     private Mono<UsernamePasswordAuthenticationToken> authenticateToken(String token) {
-        try {
-            Claims claims = jwtTokenVerificator.validateToken(token);
-            String username = claims.getSubject();
+        return Mono.fromCallable(() -> jwtTokenVerificator.validateToken(token))
+                .flatMap(claims -> {
+                    String username = claims.getSubject();
+                    if (username == null) {
+                        log.debug("No subject found in JWT token");
+                        return Mono.empty();
+                    }
 
-            if (username == null) {
-                log.debug("No subject found in JWT token");
-                return Mono.empty();
-            }
+                    var principal = new AidjiPrincipal(
+                            username,
+                            (String) claims.get("ipAddress"),
+                            (String) claims.get("aud"),
+                            claims.getIssuer(),
+                            (String) claims.get("sessionId"),
+                            extractAuthorities(claims),
+                            (Map<String, Object>) claims.get("extraClaims")
+                    );
 
-            return userDetailsService.findByUsername(username)
-                    .map(userDetails -> {
-                        Collection<SimpleGrantedAuthority> authorities = extractAuthorities(claims);
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            principal,
+                            token,
+                            principal.getAuthorities()
+                    );
+                    auth.setAuthenticated(true);
 
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                authorities
-                        );
+                    return Mono.just(auth);
+                });
+    }
 
-                        log.debug("Authentication successful for user: {}", username);
-                        return authToken;
-                    });
 
-        } catch (be.aidji.boot.core.exception.SecurityException e) {
-            return Mono.error(e);
-        }
+    private Collection<? extends GrantedAuthority> mapAuthorities(List<String> authorities) {
+        return authorities.stream()
+                .map(SimpleGrantedAuthority::new)
+                .toList();
     }
 
     /**
