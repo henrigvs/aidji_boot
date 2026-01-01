@@ -13,7 +13,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -56,25 +55,30 @@ public class JwtAuthenticationWebFilter implements WebFilter {
     }
 
     @Override
-    public @NonNull Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
-        // Skip filter for public paths
+    public @NonNull Mono<Void> filter(@NonNull ServerWebExchange exchange,
+                                      @NonNull WebFilterChain chain) {
+
         String path = exchange.getRequest().getPath().value();
         if (shouldNotFilter(path)) {
             return chain.filter(exchange);
         }
 
         return extractToken(exchange.getRequest())
-                .flatMap(this::authenticateToken)
+                .flatMap(token ->
+                        authenticateToken(token)
+                                .onErrorResume(be.aidji.boot.core.exception.SecurityException.class, ex -> {
+                                    log.debug("JWT validation failed, continuing without authentication: {}", ex.getMessage());
+                                    return Mono.empty();
+                                })
+                )
                 .flatMap(authentication ->
                         chain.filter(exchange)
                                 .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication))
                 )
-                .onErrorResume(be.aidji.boot.core.exception.SecurityException.class, e -> {
-                    log.debug("JWT authentication failed: {}", e.getMessage());
-                    return chain.filter(exchange);
-                })
-                .switchIfEmpty(Mono.defer(() -> chain.filter(exchange)));
+                .switchIfEmpty(chain.filter(exchange));
+
     }
+
 
     /**
      * Extracts JWT token from a cookie or Authorization header based on configuration.
@@ -113,6 +117,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         return Mono.fromCallable(() -> jwtTokenVerificator.validateToken(token))
                 .flatMap(claims -> {
                     String username = claims.getSubject();
+
                     if (username == null) {
                         log.debug("No subject found in JWT token");
                         return Mono.empty();
@@ -128,13 +133,11 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                             claims.get("extraClaims") != null ? (Map<String, Object>) claims.get("extraClaims") : null
                     );
 
-                    var auth = new UsernamePasswordAuthenticationToken(
+                    return Mono.just(new UsernamePasswordAuthenticationToken(
                             principal,
                             token,
                             principal.getAuthorities()
-                    );
-
-                    return Mono.just(auth);
+                    ));
                 });
     }
 

@@ -45,6 +45,7 @@ import reactor.test.StepVerifier;
 import java.util.List;
 import java.util.Map;
 
+import static be.aidji.boot.core.exception.SecurityErrorCode.BEARER_TOKEN_EXPIRED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -515,6 +516,7 @@ class JwtAuthenticationWebFilterTest {
             verify(filterChain, atLeastOnce()).filter(exchange);
         }
 
+        // ... existing code ...
         @Test
         @DisplayName("should continue filter chain when token is expired")
         void shouldContinueOnExpiredToken() {
@@ -525,8 +527,9 @@ class JwtAuthenticationWebFilterTest {
                     .build();
             ServerWebExchange exchange = MockServerWebExchange.from(request);
 
+            // On simule l'exception levée par le vérificateur
             when(jwtTokenVerificator.validateToken(token))
-                    .thenThrow(new SecurityException(
+                    .thenThrow(new be.aidji.boot.core.exception.SecurityException(
                             be.aidji.boot.core.exception.SecurityErrorCode.BEARER_TOKEN_EXPIRED,
                             "Token expired"
                     ));
@@ -535,8 +538,11 @@ class JwtAuthenticationWebFilterTest {
             Mono<Void> result = filter.filter(exchange, filterChain);
 
             // Then
-            StepVerifier.create(result).verifyComplete();
-            verify(filterChain, atLeastOnce()).filter(exchange);
+            StepVerifier.create(result)
+                    .verifyComplete();
+
+            verify(filterChain).filter(exchange);
+            verify(jwtTokenVerificator).validateToken(token);
         }
     }
 
