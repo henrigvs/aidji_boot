@@ -109,12 +109,18 @@ jobs:
       - name: Set Release Version
         if: env.IS_SNAPSHOT == 'false'
         run: |
+          echo "📍 Before version change:"
+          grep -r "<version>" --include="pom.xml" . | head -20
+
           # Update tous les modules
           mvn versions:set -DnewVersion=${{ env.RELEASE_VERSION }} -DgenerateBackupPoms=false -DprocessAllModules=true
-          
+
           # Update le BOM séparément (pas de parent)
           mvn -f aidji-bom/pom.xml versions:set -DnewVersion=${{ env.RELEASE_VERSION }} -DgenerateBackupPoms=false
-          
+
+          echo "📍 After version change:"
+          grep -r "<version>" --include="pom.xml" . | head -20
+
           echo "✅ All versions set to ${{ env.RELEASE_VERSION }}"
 
       - name: Commit release version
