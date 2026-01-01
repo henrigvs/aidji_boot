@@ -1,5 +1,6 @@
 package be.aidji.boot.security.webflux.config;
 
+import be.aidji.boot.core.util.Preconditions;
 import be.aidji.boot.security.webflux.AidjiSecurityProperties;
 import be.aidji.boot.security.webflux.handler.AidjiServerAccessDeniedHandler;
 import be.aidji.boot.security.webflux.handler.AidjiServerAuthenticationEntryPoint;
@@ -29,6 +30,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * Auto-configuration for Aidji Security WebFlux.
@@ -120,7 +123,12 @@ public class AidjiSecurityWebFluxAutoConfiguration {
             ObjectProvider<CorsConfigurationSource> corsConfigurationSource,
             ObjectProvider<AidjiSecurityCustomizer> customizers) {
 
-        String[] whitelist = properties.security().publicPaths().toArray(String[]::new);
+        String[] whitelist;
+        if(properties.security() != null && properties.security().publicPaths() != null) {
+            whitelist = properties.security().publicPaths().toArray(String[]::new);
+        } else {
+            whitelist = new String[0];
+        }
 
         log.info("Aidji Security WebFlux initialized with {} public paths: {}", whitelist.length, String.join(", ", whitelist));
         log.info("JWT cookie-based: {}, cookie name: {}", properties.jwt().cookieBased(), properties.jwt().cookieName());

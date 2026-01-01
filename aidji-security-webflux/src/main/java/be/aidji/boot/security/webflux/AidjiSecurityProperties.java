@@ -27,6 +27,11 @@ public record AidjiSecurityProperties(
         JwtProperties jwt,
         SecurityProperties security
 ) {
+    public AidjiSecurityProperties {
+        if (security == null) {
+            security = new SecurityProperties(null);
+        }
+    }
 
     public record JwtProperties(
 
@@ -66,7 +71,7 @@ public record AidjiSecurityProperties(
     ) {
         public SecurityProperties {
             if (publicPaths == null) {
-                publicPaths = List.of("/api/auth/**", "/actuator/health");
+                publicPaths = List.of();
             }
         }
     }
