@@ -21,16 +21,13 @@
 
     <groupId>be.aidji.boot</groupId>
     <artifactId>aidji-bom</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Aidji BOM</name>
     <description>Bill of Materials for Aidji Framework - centralizes all dependency versions</description>
 
     <properties>
-        <!-- Aidji versions -->
-        <aidji.version>1.0.0</aidji.version>
-
         <!-- Spring versions -->
         <spring-boot.version>4.0.0</spring-boot.version>
 
@@ -58,25 +55,25 @@
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-core</artifactId>
-                <version>${aidji.version}</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-web</artifactId>
-                <version>${aidji.version}</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-security</artifactId>
-                <version>${aidji.version}</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-security-webflux</artifactId>
-                <version>${aidji.version}</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- Feign (standalone, sans Spring Cloud) -->
