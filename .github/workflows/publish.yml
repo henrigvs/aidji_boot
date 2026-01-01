@@ -2,6 +2,17 @@ name: Publish AIDJI BOOT to GitHub Packages
 
 on:
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - snapshot
+          - patch
+          - minor
+          - major
   push:
     branches: [ main ]
     paths-ignore:
@@ -36,23 +47,78 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Remove SNAPSHOT and prepare release
+      - name: Calculate Versions
+        id: versions
+        run: |
+          # Get current version from Maven
+          CURRENT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | tr -d '[:space:]')
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Parse version (e.g., "1.0.6-SNAPSHOT")
+          if [[ $CURRENT_VERSION =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-SNAPSHOT)?$ ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            PATCH="${BASH_REMATCH[3]}"
+          else
+            echo "❌ Unable to parse version: $CURRENT_VERSION"
+            exit 1
+          fi
+          
+          echo "Parsed - major: $MAJOR, minor: $MINOR, patch: $PATCH"
+          
+          # Determine release type (default to patch for push events)
+          RELEASE_TYPE="${{ github.event.inputs.release_type || 'patch' }}"
+          echo "Release type: $RELEASE_TYPE"
+          
+          case $RELEASE_TYPE in
+            snapshot)
+              RELEASE_VERSION="$CURRENT_VERSION"
+              NEXT_VERSION="$CURRENT_VERSION"
+              IS_SNAPSHOT="true"
+              ;;
+            patch)
+              RELEASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+              NEXT_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))-SNAPSHOT"
+              IS_SNAPSHOT="false"
+              ;;
+            minor)
+              RELEASE_VERSION="${MAJOR}.$((MINOR + 1)).0"
+              NEXT_VERSION="${MAJOR}.$((MINOR + 1)).1-SNAPSHOT"
+              IS_SNAPSHOT="false"
+              ;;
+            major)
+              RELEASE_VERSION="$((MAJOR + 1)).0.0"
+              NEXT_VERSION="$((MAJOR + 1)).0.1-SNAPSHOT"
+              IS_SNAPSHOT="false"
+              ;;
+            *)
+              echo "❌ Unknown release type: $RELEASE_TYPE"
+              exit 1
+              ;;
+          esac
+          
+          echo "✅ Version calculation complete"
+          echo "   Release version: $RELEASE_VERSION"
+          echo "   Next version: $NEXT_VERSION"
+          
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
+          echo "IS_SNAPSHOT=$IS_SNAPSHOT" >> $GITHUB_ENV
+
+      - name: Set Release Version
+        if: env.IS_SNAPSHOT == 'false'
         run: |
           # Update tous les modules
-          mvn versions:set -DremoveSnapshot -DgenerateBackupPoms=false -DprocessAllModules=true
+          mvn versions:set -DnewVersion=${{ env.RELEASE_VERSION }} -DgenerateBackupPoms=false -DprocessAllModules=true
           
-          # Update le BOM séparément
-          mvn -f aidji-bom/pom.xml versions:set -DremoveSnapshot -DgenerateBackupPoms=false
+          # Update le BOM séparément (pas de parent)
+          mvn -f aidji-bom/pom.xml versions:set -DnewVersion=${{ env.RELEASE_VERSION }} -DgenerateBackupPoms=false
           
-          RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
-          
-          # Update aidji.version property dans le BOM
-          sed -i "s|<aidji.version>.*</aidji.version>|<aidji.version>$RELEASE_VERSION</aidji.version>|" aidji-bom/pom.xml
-          
-          echo "Release version: $RELEASE_VERSION"
+          echo "✅ All versions set to ${{ env.RELEASE_VERSION }}"
 
       - name: Commit release version
+        if: env.IS_SNAPSHOT == 'false'
         run: |
           git add -A '*pom.xml'
           git commit -m "Release ${{ env.RELEASE_VERSION }}"
@@ -63,6 +129,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Increment to next SNAPSHOT version
+      - name: Set Next SNAPSHOT Version
+        if: env.IS_SNAPSHOT == 'false'
         run: |
-          mvn build-helper:
+          # Update tous les modules
+          mvn versions:set -DnewVersion=${{ env.NEXT_VERSION }} -DgenerateBackupPoms=false -DprocessAllModules=true
+          
+          # Update le BOM séparément
+          mvn -f aidji-bom/pom.xml versions:set -DnewVersion=${{ env.NEXT_VERSION }} -DgenerateBackupPoms=false
+          
+          echo "✅ All versions set to ${{ env.NEXT_VERSION }}"
+
+      - name: Commit next development version
+        if: env.IS_SNAPSHOT == 'false'
+        run: |
+          git add -A '*pom.xml'
+          git commit -m "Next dev iteration"
+
+      - name: Push changes and tags
+        if: env.IS_SNAPSHOT == 'false'
+        run: |
+          git push origin main
+          git push origin "v${{ env.RELEASE_VERSION }}"
