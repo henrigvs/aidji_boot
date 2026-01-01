@@ -51,6 +51,7 @@
         <module>aidji-core</module>
         <module>aidji-web</module>
         <module>aidji-security</module>
+        <module>aidji-security-webflux</module>
     </modules>
 
     <properties>
