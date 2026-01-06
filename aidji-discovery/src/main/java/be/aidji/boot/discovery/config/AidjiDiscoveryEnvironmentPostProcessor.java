@@ -15,6 +15,7 @@
  */
 package be.aidji.boot.discovery.config;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -29,7 +30,7 @@ import java.util.Map;
 public class AidjiDiscoveryEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
     @Override
-    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+    public void postProcessEnvironment(ConfigurableEnvironment environment, @NonNull SpringApplication application) {
         String enabled = environment.getProperty("aidji.discovery.enabled", "true");
         if (!"true".equalsIgnoreCase(enabled)) {
             return;
