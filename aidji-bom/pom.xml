@@ -76,6 +76,12 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>be.aidji.boot</groupId>
+                <artifactId>aidji-discovery</artifactId>
+                <version>${aidji.version}</version>
+            </dependency>
+
             <!-- Feign (standalone, sans Spring Cloud) -->
             <dependency>
                 <groupId>io.github.openfeign</groupId>
