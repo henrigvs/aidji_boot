@@ -58,7 +58,7 @@ Add to your `pom.xml`:
 <dependency>
     <groupId>be.aidji.boot</groupId>
     <artifactId>aidji-core</artifactId>
-    <version>1.0.5-SNAPSHOT</version>
+    <version>1.0.5</version>
 </dependency>
 ```
 
@@ -70,7 +70,7 @@ Or import the BOM:
         <dependency>
             <groupId>be.aidji.boot</groupId>
             <artifactId>aidji-bom</artifactId>
-            <version>1.0.5-SNAPSHOT</version>
+            <version>1.0.5</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
