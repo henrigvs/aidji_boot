@@ -36,7 +36,7 @@ Add the BOM to your project:
         <dependency>
             <groupId>be.aidji.boot</groupId>
             <artifactId>aidji-bom</artifactId>
-            <version>1.0.5</version>
+            <version>1.0.6-SNAPSHOT</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -50,7 +50,7 @@ Or use the parent POM:
 <parent>
     <groupId>be.aidji.boot</groupId>
     <artifactId>aidji-parent</artifactId>
-    <version>1.0.5</version>
+    <version>1.0.6-SNAPSHOT</version>
 </parent>
 ```
 
