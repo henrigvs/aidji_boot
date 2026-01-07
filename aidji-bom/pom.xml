@@ -79,7 +79,7 @@
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-discovery</artifactId>
-                <version>${aidji.version}</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- Feign (standalone, sans Spring Cloud) -->

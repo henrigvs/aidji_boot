@@ -1,8 +1,23 @@
+/*
+ * Copyright 2025 Henri GEVENOIS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package be.aidji.boot.web.aspect;
 
 import be.aidji.boot.core.exception.AidjiException;
 import be.aidji.boot.core.exception.CommonErrorCode;
-import be.aidji.boot.core.exception.ErrorCode;
 import be.aidji.boot.core.exception.TechnicalException;
 import feign.FeignException;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -62,7 +77,6 @@ class LogFeignClientAspect {
         LogFeignClient logFeignClient = signature.getMethod().getAnnotation(LogFeignClient.class);
         String clientName = resolveClientName(logFeignClient, signature);
         String methodName = signature.getName();
-        ErrorCode errorCode = resolveErrorCode(logFeignClient);
 
         log.info("[{}] <-- {}", clientName, methodName);
         long start = System.currentTimeMillis();
@@ -74,7 +88,7 @@ class LogFeignClientAspect {
             return result;
 
         } catch (FeignException e) {
-            handleFeignException(e, clientName, errorCode, logFeignClient.rethrowException());
+            handleFeignException(e, clientName, logFeignClient.rethrowException());
 
         } catch (AidjiException e) {
             handleAidjiException(e, methodName, log, logFeignClient.rethrowException());
@@ -96,18 +110,10 @@ class LogFeignClientAspect {
     }
 
     /**
-     * Resolves the error code from the annotation's error code class.
-     * Uses the first enum constant as default.
+     * Handles Feign-specific exceptions by wrapping them in a TechnicalException
+     * with {@link CommonErrorCode#EXTERNAL_SERVICE_ERROR}.
      */
-    private ErrorCode resolveErrorCode(LogFeignClient annotation) {
-        return annotation.errorCodeClass().getEnumConstants()[0];
-    }
-
-    /**
-     * Handles Feign-specific exceptions by wrapping them in a TechnicalException.
-     */
-    private void handleFeignException(FeignException e, String clientName,
-                                      ErrorCode errorCode, boolean rethrow) {
+    private void handleFeignException(FeignException e, String clientName, boolean rethrow) {
         String error = e.contentUTF8();
         HttpStatus status = HttpStatus.valueOf(e.status());
         String errorMessage = String.format(
@@ -116,7 +122,7 @@ class LogFeignClientAspect {
         );
 
         if (rethrow) {
-            throw new TechnicalException(errorCode, errorMessage, e);
+            throw new TechnicalException(CommonErrorCode.EXTERNAL_SERVICE_ERROR, errorMessage, e);
         }
     }
 
