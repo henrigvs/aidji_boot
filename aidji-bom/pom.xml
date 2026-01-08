@@ -38,6 +38,8 @@
         <lombok.version>1.18.36</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <feign.version>13.5</feign.version>
+        <opentelemetry.version>1.44.1</opentelemetry.version>
+        <opentelemetry-instrumentation.version>2.10.0</opentelemetry-instrumentation.version>
     </properties>
 
     <dependencyManagement>
@@ -82,6 +84,12 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>be.aidji.boot</groupId>
+                <artifactId>aidji-observability</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- Feign (standalone, sans Spring Cloud) -->
             <dependency>
                 <groupId>io.github.openfeign</groupId>
@@ -108,6 +116,22 @@
                 <artifactId>mapstruct-processor</artifactId>
                 <version>${mapstruct.version}</version>
                 <scope>provided</scope>
+            </dependency>
+
+            <!-- OpenTelemetry -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom</artifactId>
+                <version>${opentelemetry-instrumentation.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -53,6 +53,7 @@
         <module>aidji-security</module>
         <module>aidji-security-webflux</module>
         <module>aidji-discovery</module>
+        <module>aidji-observability</module>
     </modules>
 
     <properties>
