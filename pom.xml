@@ -21,11 +21,11 @@
 
     <groupId>be.aidji.boot</groupId>
     <artifactId>aidji</artifactId>
-    <version>1.0.6-SNAPSHOT</version>
+    <version>1.0.7-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Aidji Framework</name>
-    <description>Opinionated Spring Boot 4 framework for rapid application development</description>
+    <description>Opinionated Spring Boot 4 framework for rapid application development with built-in observability</description>
     <url>https://github.com/henrigvs/aidji_boot</url>
     <inceptionYear>2025</inceptionYear>
 
