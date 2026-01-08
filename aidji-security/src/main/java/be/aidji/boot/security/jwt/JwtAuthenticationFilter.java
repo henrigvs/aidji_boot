@@ -62,18 +62,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenVerificator jwtTokenVerificator;
     private final UserDetailsService userDetailsService;
-    private final AidjiSecurityProperties.JwtProperties jwtProperties;
-    private final AidjiSecurityProperties.SecurityProperties securityProperties;
+    private final AidjiSecurityProperties properties;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationFilter(
             JwtTokenVerificator jwtTokenVerificator,
             UserDetailsService userDetailsService,
-            AidjiSecurityProperties.JwtProperties jwtProperties, AidjiSecurityProperties.SecurityProperties securityProperties) {
+            AidjiSecurityProperties properties) {
         this.jwtTokenVerificator = jwtTokenVerificator;
         this.userDetailsService = userDetailsService;
-        this.jwtProperties = jwtProperties;
-        this.securityProperties = securityProperties;
+        this.properties = properties;
     }
 
     @Override
@@ -100,7 +98,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * Extracts JWT token from a cookie or Authorization header based on configuration.
      */
     private Optional<String> extractToken(HttpServletRequest request) {
-        if (jwtProperties.cookieBased()) {
+        if (properties.jwt().cookieBased()) {
             Optional<String> cookieToken = extractTokenFromCookie(request);
             if (cookieToken.isPresent()) {
                 return cookieToken;
@@ -116,7 +114,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return Arrays.stream(request.getCookies())
-                .filter(cookie -> jwtProperties.cookieName().equals(cookie.getName()))
+                .filter(cookie -> properties.jwt().cookieName().equals(cookie.getName()))
                 .map(Cookie::getValue)
                 .filter(value -> !value.isBlank())
                 .findFirst();
@@ -195,7 +193,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return securityProperties.publicPaths().stream()
+        return properties.publicPaths().stream()
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 }

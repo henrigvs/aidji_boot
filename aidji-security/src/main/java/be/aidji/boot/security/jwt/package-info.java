@@ -17,12 +17,13 @@
 /**
  * JWT (JSON Web Token) authentication implementation.
  *
- * <p>This package provides stateless authentication using JWT tokens with support
- * for asymmetric (RSA) key verification via JWKS endpoints:</p>
+ * <p>This package provides stateless authentication using JWT tokens with two modes:</p>
  *
  * <ul>
- *   <li>{@link be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm} - Validates JWT tokens signed with
- *       asymmetric keys (RS256) by fetching and caching public keys from a JWKS endpoint</li>
+ *   <li><b>CIPM Mode</b> ({@link be.aidji.boot.security.jwt.cipm}) - JWT generation via external CIPM service
+ *       and validation using JWKS endpoint for public key retrieval</li>
+ *   <li><b>Standalone Mode</b> ({@link be.aidji.boot.security.jwt.stand_alone}) - Self-contained JWT generation
+ *       and validation using application-managed RSA key pairs</li>
  *   <li>{@link be.aidji.boot.security.jwt.JwtAuthenticationFilter} - Servlet filter that intercepts
  *       requests, extracts JWT from cookies or Authorization header, and sets up Spring Security context</li>
  * </ul>
@@ -34,28 +35,50 @@
  *   <li><b>Authorization Header</b> - Standard for APIs ({@code Authorization: Bearer <token>})</li>
  * </ul>
  *
- * <h2>JWKS Integration</h2>
- * <p>The {@link be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm} fetches public keys from external
- * Identity Providers such as Keycloak, Auth0, or Okta. Features include:</p>
+ * <h2>Mode Selection</h2>
+ * <p>Choose your JWT mode based on your requirements:</p>
  * <ul>
- *   <li>Automatic key caching with configurable TTL</li>
- *   <li>Automatic cache refresh on key rotation (unknown kid)</li>
- *   <li>Thread-safe key storage</li>
- *   <li>No external JSON library required (native Java parsing)</li>
+ *   <li><b>CIPM Mode</b> - Use when you have a centralized identity management service backed by HashiCorp Vault.
+ *       Provides centralized key management and token signing across multiple applications.</li>
+ *   <li><b>Standalone Mode</b> - Use for self-contained applications that manage their own JWT keys.
+ *       Simpler setup but requires application-level key management.</li>
  * </ul>
  *
- * <h2>Configuration</h2>
+ * <h2>Configuration - CIPM Mode</h2>
  * <pre>{@code
  * aidji:
  *   security:
+ *     enabled: true
+ *     public-paths:
+ *       - /api/public/**
  *     jwt:
- *       public-key-url: https://auth.example.com/.well-known/jwks.json
- *       public-key-cache-ttl-seconds: 3600
+ *       mode: cipm
+ *       generation-enabled: true
  *       cookie-based: true
- *       cookie-name: "auth-token"
- *       public-paths:
- *         - /api/auth/**
- *         - /api/public/**
+ *       cookie-name: jwt-security-principal
+ *       cipm-properties:
+ *         base-url: https://cipm.example.com
+ *         public-key-uri: /.well-known/jwks.json
+ *         sign-token-uri: /api/sign-token
+ *         api-token: ${CIPM_API_TOKEN}
+ *         issuer: cipm-issuer
+ * }</pre>
+ *
+ * <h2>Configuration - Standalone Mode</h2>
+ * <pre>{@code
+ * aidji:
+ *   security:
+ *     enabled: true
+ *     public-paths:
+ *       - /api/public/**
+ *     jwt:
+ *       mode: standalone
+ *       cookie-based: true
+ *       cookie-name: jwt-security-principal
+ *       standalone:
+ *         issuer: my-app
+ *         private-key: ${JWT_PRIVATE_KEY}
+ *         public-key: ${JWT_PUBLIC_KEY}
  * }</pre>
  *
  * <h2>Usage - Validating Tokens</h2>

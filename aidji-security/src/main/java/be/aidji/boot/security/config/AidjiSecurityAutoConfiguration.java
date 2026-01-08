@@ -156,8 +156,7 @@ public class AidjiSecurityAutoConfiguration {
         return new JwtAuthenticationFilter(
                 jwtTokenVerificator,
                 userDetailsService,
-                properties.jwt(),
-                properties.security()
+                properties
         );
     }
 
@@ -189,7 +188,7 @@ public class AidjiSecurityAutoConfiguration {
             ObjectProvider<@NonNull CorsConfigurationSource> corsConfigurationSource,
             ObjectProvider<@NonNull AidjiSecurityCustomizer> customizers) {
 
-        String[] whitelist = properties.security().publicPaths().toArray(String[]::new);
+        String[] whitelist = properties.publicPaths().toArray(String[]::new);
 
         log.info("Aidji Security initialized with {} public paths: {}", whitelist.length, String.join(", ", whitelist));
         log.info("JWT cookie-based: {}, cookie name: {}", properties.jwt().cookieBased(), properties.jwt().cookieName());

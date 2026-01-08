@@ -17,30 +17,57 @@
 /**
  * Aidji Boot Security Module.
  *
- * <p>This module provides a pre-configured, opinionated security setup for Spring Boot applications:</p>
+ * <p>This module provides a pre-configured, opinionated security setup for Spring Boot applications
+ * with two JWT modes:</p>
  *
  * <ul>
- *   <li><b>JWT Authentication</b> - Stateless authentication via HTTP-only cookies or Authorization header,
- *       with JWKS support for external Identity Providers ({@link be.aidji.boot.security.jwt})</li>
+ *   <li><b>CIPM Mode</b> - JWT generation and validation via external CIPM service backed by HashiCorp Vault
+ *       ({@link be.aidji.boot.security.jwt.cipm})</li>
+ *   <li><b>Standalone Mode</b> - Self-contained JWT generation and validation using RSA key pairs
+ *       ({@link be.aidji.boot.security.jwt.stand_alone})</li>
  *   <li><b>Autoconfiguration</b> - Zero-config security with sensible defaults
  *       ({@link be.aidji.boot.security.config})</li>
  *   <li><b>Error Handlers</b> - Standardized JSON responses for 401/403 errors
  *       ({@link be.aidji.boot.security.handler})</li>
  * </ul>
  *
- * <h2>Quick Start</h2>
- * <p>Add the dependency and configure minimal properties:</p>
+ * <h2>Quick Start - CIPM Mode</h2>
  * <pre>{@code
  * aidji:
  *   security:
+ *     enabled: true
+ *     public-paths:
+ *       - /api/auth/**
+ *       - /api/public/**
  *     jwt:
- *       public-key-url: https://auth.example.com/.well-known/jwks.json
- *       public-key-cache-ttl-seconds: 3600
+ *       mode: cipm
+ *       generation-enabled: true
  *       cookie-based: true
- *       cookie-name: "auth-token"
- *       public-paths:
- *         - /api/auth/**
- *         - /api/public/**
+ *       cookie-name: jwt-security-principal
+ *       cipm-properties:
+ *         base-url: https://cipm.example.com
+ *         public-key-uri: /.well-known/jwks.json
+ *         sign-token-uri: /api/sign-token
+ *         api-token: ${CIPM_API_TOKEN}
+ *         issuer: cipm-issuer
+ * }</pre>
+ *
+ * <h2>Quick Start - Standalone Mode</h2>
+ * <pre>{@code
+ * aidji:
+ *   security:
+ *     enabled: true
+ *     public-paths:
+ *       - /api/auth/**
+ *       - /api/public/**
+ *     jwt:
+ *       mode: standalone
+ *       cookie-based: true
+ *       cookie-name: jwt-security-principal
+ *       standalone:
+ *         issuer: my-app
+ *         private-key: ${JWT_PRIVATE_KEY}
+ *         public-key: ${JWT_PUBLIC_KEY}
  * }</pre>
  *
  * <h2>Features</h2>

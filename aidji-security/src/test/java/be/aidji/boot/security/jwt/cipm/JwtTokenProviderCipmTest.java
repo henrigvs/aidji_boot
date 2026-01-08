@@ -27,6 +27,7 @@ import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,7 +38,6 @@ class JwtTokenProviderCipmTest {
 
     private ClientAndServer mockServer;
     private JwtTokenProviderCipm provider;
-    private AidjiSecurityProperties securityProperties;
 
     @BeforeEach
     void setUp() {
@@ -65,9 +65,10 @@ class JwtTokenProviderCipmTest {
                 cipmProperties
         );
 
-        securityProperties = new AidjiSecurityProperties(
-                jwtProperties,
-                new AidjiSecurityProperties.SecurityProperties(null)
+        AidjiSecurityProperties securityProperties = new AidjiSecurityProperties(
+                true,
+                List.of("/actuator/**", "/api/auth/**", "/api/public/**"),
+                jwtProperties
         );
 
         provider = new JwtTokenProviderCipm(securityProperties);

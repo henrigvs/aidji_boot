@@ -68,28 +68,37 @@ import java.util.List;
  */
 @ConfigurationProperties(prefix = "aidji.security")
 public record AidjiSecurityProperties(
-        JwtProperties jwt,
-        SecurityProperties security
+        Boolean enabled,
+        List<String> publicPaths,
+        JwtProperties jwt
 ) {
+    public AidjiSecurityProperties {
+        if (enabled == null) {
+            enabled = false;
+        }
+        if (publicPaths == null) {
+            publicPaths = List.of("/api/auth/**", "/actuator/health");
+        }
+    }
 
+    /**
+     * JWT authentication configuration properties.
+     *
+     * @param mode JWT mode: "cipm" for external CIPM service, "standalone" for self-contained JWT
+     * @param generationEnabled Whether JWT generation is enabled (true = generate + validate, false = validate only)
+     * @param cookieBased Use HTTP-only cookie instead of Authorization header
+     * @param cookieName Cookie name when cookie-based auth is enabled (defaults to "jwt-security-principal")
+     * @param maxAge Cookie max age in seconds (defaults to 3600)
+     * @param standalone Standalone mode configuration (for mode="standalone")
+     * @param cipmProperties CIPM mode configuration (for mode="cipm")
+     */
     public record JwtProperties(
-
-            // The way the application going to handle the jwt
             String mode,
-
-            // Indicates if the generation of JWT is enabled in the application
-            boolean generationEnabled, // true = generate + validate, false = validate only
-
-            // Use HTTP-only cookie instead of Authorization header
+            boolean generationEnabled,
             boolean cookieBased,
-
-            // Cookie name when cookie-based auth is enabled
             String cookieName,
-
             Long maxAge,
-
             StandaloneProperties standalone,
-
             CipmProperties cipmProperties
     ) {
         public JwtProperties {
@@ -102,11 +111,19 @@ public record AidjiSecurityProperties(
         }
     }
 
+    /**
+     * Standalone mode JWT configuration properties.
+     *
+     * @param issuer JWT issuer identifier (defaults to "aidji-boot-app")
+     * @param keySize RSA key size in bits (defaults to 2048)
+     * @param privateKey Private key content (PEM or Base64 encoded)
+     * @param publicKey Public key content (PEM or Base64 encoded)
+     */
     public record StandaloneProperties(
             String issuer,
             int keySize,
-            String privateKey,  // PEM content ou Base64
-            String publicKey    // PEM content ou Base64
+            String privateKey,
+            String publicKey
     ) {
         public StandaloneProperties {
             if (issuer == null || issuer.isBlank()) {
@@ -123,6 +140,16 @@ public record AidjiSecurityProperties(
         }
     }
 
+    /**
+     * CIPM mode JWT configuration properties.
+     *
+     * @param baseUrl Base URL of the CIPM service
+     * @param publicKeyUri URI path to the JWKS endpoint (e.g., "/.well-known/jwks.json")
+     * @param signTokenUri URI path to the token signing endpoint (e.g., "/api/sign-token")
+     * @param apiToken API token for authenticating with CIPM service
+     * @param issuer JWT issuer identifier
+     * @param jwksCacheTtlSeconds JWKS cache TTL in seconds (defaults to 3600)
+     */
     public record CipmProperties(
             String baseUrl,
             String publicKeyUri,
@@ -142,17 +169,6 @@ public record AidjiSecurityProperties(
         }
         public String getSignTokenUrl() {
             return baseUrl + signTokenUri;
-        }
-    }
-
-    public record SecurityProperties(
-            // Paths that don't require authentication
-            List<String> publicPaths
-    ) {
-        public SecurityProperties {
-            if (publicPaths == null) {
-                publicPaths = List.of("/api/auth/**", "/actuator/health");
-            }
         }
     }
 }
