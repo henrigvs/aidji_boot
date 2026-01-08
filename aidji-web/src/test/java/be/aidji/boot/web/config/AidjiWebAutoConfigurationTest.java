@@ -18,7 +18,6 @@ package be.aidji.boot.web.config;
 import be.aidji.boot.web.AidjiWebProperties;
 import be.aidji.boot.web.client.AidjiRestClientFactory;
 import be.aidji.boot.web.exception.GlobalExceptionHandler;
-import be.aidji.boot.web.filter.RequestLoggingFilter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -70,9 +69,7 @@ class AidjiWebAutoConfigurationTest {
         void shouldNotCreateRequestLoggingFilterWhenDisabled() {
             contextRunner
                     .withPropertyValues("aidji.web.request-logging.enabled=false")
-                    .run(context -> {
-                        assertThat(context).doesNotHaveBean("aidjiRequestLoggingFilter");
-                    });
+                    .run(context -> assertThat(context).doesNotHaveBean("aidjiRequestLoggingFilter"));
         }
     }
 
@@ -84,9 +81,7 @@ class AidjiWebAutoConfigurationTest {
         @DisplayName("should not create CORS configurer by default")
         void shouldNotCreateCorsConfigurerByDefault() {
             contextRunner
-                    .run(context -> {
-                        assertThat(context).doesNotHaveBean("aidjiCorsConfigurer");
-                    });
+                    .run(context -> assertThat(context).doesNotHaveBean("aidjiCorsConfigurer"));
         }
 
         @Test
@@ -146,9 +141,7 @@ class AidjiWebAutoConfigurationTest {
         @DisplayName("should create RestClient builder")
         void shouldCreateRestClientBuilder() {
             contextRunner
-                    .run(context -> {
-                        assertThat(context).hasSingleBean(RestClient.Builder.class);
-                    });
+                    .run(context -> assertThat(context).hasSingleBean(RestClient.Builder.class));
         }
 
         @Test

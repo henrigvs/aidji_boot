@@ -17,7 +17,6 @@ package be.aidji.boot.observability.config;
 
 import be.aidji.boot.observability.properties.AidjiObservabilityProperties;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
@@ -37,8 +36,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-
-import jakarta.annotation.PostConstruct;
 
 /**
  * Auto-configuration for Aidji observability with OpenTelemetry.

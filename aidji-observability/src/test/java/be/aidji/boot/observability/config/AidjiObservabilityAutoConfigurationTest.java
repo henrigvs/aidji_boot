@@ -16,7 +16,6 @@
 package be.aidji.boot.observability.config;
 
 import be.aidji.boot.observability.properties.AidjiObservabilityProperties;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.sdk.resources.Resource;
@@ -231,9 +230,7 @@ class AidjiObservabilityAutoConfigurationTest {
                     .withPropertyValues(
                             "aidji.observability.tracing.sampling-probability=-0.1"
                     )
-                    .run(context -> {
-                        assertThat(context).hasFailed();
-                    });
+                    .run(context -> assertThat(context).hasFailed());
         }
 
         @Test
@@ -243,9 +240,7 @@ class AidjiObservabilityAutoConfigurationTest {
                     .withPropertyValues(
                             "aidji.observability.tracing.sampling-probability=1.5"
                     )
-                    .run(context -> {
-                        assertThat(context).hasFailed();
-                    });
+                    .run(context -> assertThat(context).hasFailed());
         }
 
         @Test
