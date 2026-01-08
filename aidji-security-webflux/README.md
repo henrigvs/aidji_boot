@@ -94,7 +94,7 @@ Override any auto-configured bean by declaring your own:
 
 ```java
 @Bean
-public JwtTokenVerificator jwtTokenVerificator(AidjiSecurityProperties properties) {
+public JwtTokenVerificator jwtTokenVerificatorCipm(AidjiSecurityProperties properties) {
     // Your custom implementation
 }
 ```

@@ -17,6 +17,7 @@
 package be.aidji.boot.security.jwt;
 
 import be.aidji.boot.security.AidjiSecurityProperties;
+import be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -50,7 +51,7 @@ import java.util.Optional;
  *   <li><b>Header-based</b>: Token in Authorization header (Bearer scheme)</li>
  * </ul>
  *
- * @see JwtTokenVerificator
+ * @see JwtTokenVerificatorCipm
  * @see AidjiSecurityProperties.JwtProperties
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {

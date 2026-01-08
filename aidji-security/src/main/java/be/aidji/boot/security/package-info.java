@@ -84,7 +84,7 @@
  *
  * @see be.aidji.boot.security.config.AidjiSecurityAutoConfiguration
  * @see be.aidji.boot.security.config.AidjiSecurityCustomizer
- * @see be.aidji.boot.security.jwt.JwtTokenVerificator
+ * @see be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm
  * @see be.aidji.boot.security.jwt.JwtAuthenticationFilter
  * @see be.aidji.boot.security.AidjiSecurityProperties
  */

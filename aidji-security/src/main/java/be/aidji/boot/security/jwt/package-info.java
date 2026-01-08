@@ -21,7 +21,7 @@
  * for asymmetric (RSA) key verification via JWKS endpoints:</p>
  *
  * <ul>
- *   <li>{@link be.aidji.boot.security.jwt.JwtTokenVerificator} - Validates JWT tokens signed with
+ *   <li>{@link be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm} - Validates JWT tokens signed with
  *       asymmetric keys (RS256) by fetching and caching public keys from a JWKS endpoint</li>
  *   <li>{@link be.aidji.boot.security.jwt.JwtAuthenticationFilter} - Servlet filter that intercepts
  *       requests, extracts JWT from cookies or Authorization header, and sets up Spring Security context</li>
@@ -35,7 +35,7 @@
  * </ul>
  *
  * <h2>JWKS Integration</h2>
- * <p>The {@link be.aidji.boot.security.jwt.JwtTokenVerificator} fetches public keys from external
+ * <p>The {@link be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm} fetches public keys from external
  * Identity Providers such as Keycloak, Auth0, or Okta. Features include:</p>
  * <ul>
  *   <li>Automatic key caching with configurable TTL</li>
@@ -84,7 +84,7 @@
  *   <tr><td>Azure AD</td><td>{@code https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys}</td></tr>
  * </table>
  *
- * @see be.aidji.boot.security.jwt.JwtTokenVerificator
+ * @see be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm
  * @see be.aidji.boot.security.jwt.JwtAuthenticationFilter
  * @see be.aidji.boot.security.AidjiSecurityProperties
  */

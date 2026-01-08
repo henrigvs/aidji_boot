@@ -23,15 +23,43 @@ import java.util.List;
 /**
  * Configuration properties for Aidji Security module.
  *
- * <p>Example configuration:</p>
+ * <p>Example configuration for CIPM mode (default):</p>
  * <pre>{@code
  * aidji:
  *   security:
  *     jwt:
- *       public-key-url: https://auth.example.com/.well-known/jwks.json
- *       public-key-cache-ttl-seconds: 3600
+ *       mode: cipm
+ *       generation-enabled: true
  *       cookie-based: true
  *       cookie-name: jwt-security-principal
+ *       max-age: 3600
+ *       cipm-properties:
+ *         base-url: https://cipm.example.com
+ *         public-key-uri: /.well-known/jwks.json
+ *         sign-token-uri: /api/sign-token
+ *         api-token: ${CIPM_API_TOKEN}
+ *         issuer: cipm-issuer
+ *         jwks-cache-ttl-seconds: 3600
+ *     security:
+ *       public-paths:
+ *         - /api/auth/**
+ *         - /actuator/health
+ * }</pre>
+ *
+ * <p>Example configuration for standalone mode:</p>
+ * <pre>{@code
+ * aidji:
+ *   security:
+ *     jwt:
+ *       mode: standalone
+ *       cookie-based: true
+ *       cookie-name: jwt-security-principal
+ *       max-age: 3600
+ *       standalone:
+ *         issuer: my-app
+ *         key-size: 2048
+ *         private-key: ${JWT_PRIVATE_KEY}
+ *         public-key: ${JWT_PUBLIC_KEY}
  *     security:
  *       public-paths:
  *         - /api/auth/**
@@ -46,11 +74,11 @@ public record AidjiSecurityProperties(
 
     public record JwtProperties(
 
-            // Public key URL
-            String publicKeyUrl,
+            // The way the application going to handle the jwt
+            String mode,
 
-            // Cache duration for public keys
-            Long publicKeyCacheTtlSeconds,
+            // Indicates if the generation of JWT is enabled in the application
+            boolean generationEnabled, // true = generate + validate, false = validate only
 
             // Use HTTP-only cookie instead of Authorization header
             boolean cookieBased,
@@ -58,21 +86,62 @@ public record AidjiSecurityProperties(
             // Cookie name when cookie-based auth is enabled
             String cookieName,
 
-            Long maxAge
+            Long maxAge,
+
+            StandaloneProperties standalone,
+
+            CipmProperties cipmProperties
     ) {
         public JwtProperties {
-            if (publicKeyUrl == null || publicKeyUrl.isBlank()) {
-                throw new IllegalArgumentException("aidji.security.jwt.public-key-url is required");
-            }
-            if (publicKeyCacheTtlSeconds == null) {
-                publicKeyCacheTtlSeconds = 3600L;
-            }
             if (cookieName == null || cookieName.isBlank()) {
                 cookieName = "jwt-security-principal";
             }
-            if(maxAge == null) {
+            if (maxAge == null) {
                 maxAge = 3600L;
             }
+        }
+    }
+
+    public record StandaloneProperties(
+            String issuer,
+            int keySize,
+            String privateKey,  // PEM content ou Base64
+            String publicKey    // PEM content ou Base64
+    ) {
+        public StandaloneProperties {
+            if (issuer == null || issuer.isBlank()) {
+                issuer = "aidji-boot-app";
+            }
+            if (keySize <= 0) {
+                keySize = 2048;
+            }
+        }
+
+        public boolean hasKeys() {
+            return privateKey != null && !privateKey.isBlank()
+                    && publicKey != null && !publicKey.isBlank();
+        }
+    }
+
+    public record CipmProperties(
+            String baseUrl,
+            String publicKeyUri,
+            String signTokenUri,
+            String apiToken,
+            String issuer,
+            long jwksCacheTtlSeconds
+    ) {
+        public CipmProperties {
+            if (jwksCacheTtlSeconds <= 0) {
+                jwksCacheTtlSeconds = 3600L;
+            }
+        }
+
+        public String getPublicKeyUrl() {
+            return baseUrl + publicKeyUri;
+        }
+        public String getSignTokenUrl() {
+            return baseUrl + signTokenUri;
         }
     }
 

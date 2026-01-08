@@ -20,7 +20,12 @@ import be.aidji.boot.security.AidjiSecurityProperties;
 import be.aidji.boot.security.handler.AidjiAccessDeniedHandler;
 import be.aidji.boot.security.handler.AidjiAuthenticationEntryPoint;
 import be.aidji.boot.security.jwt.JwtAuthenticationFilter;
+import be.aidji.boot.security.jwt.JwtTokenProvider;
 import be.aidji.boot.security.jwt.JwtTokenVerificator;
+import be.aidji.boot.security.jwt.cipm.JwtTokenProviderCipm;
+import be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm;
+import be.aidji.boot.security.jwt.stand_alone.JwtTokenProviderStandAlone;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -84,11 +89,53 @@ public class AidjiSecurityAutoConfiguration {
 
     // ========== JWT Beans ==========
 
+    // ========== Mode STANDALONE (toujours génère + valide) ==========
+
     @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "aidji.security.jwt.enabled", havingValue = "true", matchIfMissing = true)
-    public JwtTokenVerificator jwtTokenVerificator(AidjiSecurityProperties properties) {
-        return new JwtTokenVerificator(properties.jwt());
+    @ConditionalOnMissingBean({JwtTokenProvider.class, JwtTokenVerificator.class})
+    @ConditionalOnProperty(name = "aidji.security.jwt.mode", havingValue = "standalone")
+    public JwtTokenProviderStandAlone standaloneJwtProvider(AidjiSecurityProperties properties) {
+        var config = properties.jwt().standalone();
+
+        if (config != null && config.hasKeys()) {
+            log.info("🔐 Standalone JWT provider initialized with environment keys (issuer: {})", config.issuer());
+            return new JwtTokenProviderStandAlone(config.issuer(), config.privateKey(), config.publicKey(), properties.jwt().maxAge());
+        }
+
+        log.warn("⚠️  No JWT keys configured. Using auto-generated keys - tokens invalidated on restart!");
+        return new JwtTokenProviderStandAlone(
+                config != null ? config.issuer() : "aidji-boot-app",
+                config != null ? config.keySize() : 2048,
+                properties.jwt().maxAge()
+        );
+    }
+
+    // ========== Mode CIPM ==========
+
+    /**
+     * Verificator CIPM — always created in cipm mode
+     */
+    @Bean
+    @ConditionalOnMissingBean(JwtTokenVerificator.class)
+    @ConditionalOnProperty(name = "aidji.security.jwt.mode", havingValue = "cipm", matchIfMissing = true)
+    public JwtTokenVerificatorCipm jwtTokenVerificatorCipm(AidjiSecurityProperties properties) {
+        var cipm = properties.jwt().cipmProperties();
+        log.info("🔐 CIPM JWT Verificator initialized (jwks: {}{})", cipm.baseUrl(), cipm.publicKeyUri());
+        return new JwtTokenVerificatorCipm(properties.jwt());
+    }
+
+    /**
+     * Provider CIPM - only if generation-enabled=true
+     */
+    @Bean
+    @ConditionalOnMissingBean(JwtTokenProvider.class)
+    @ConditionalOnProperty(name = "aidji.security.jwt.mode", havingValue = "cipm", matchIfMissing = true)
+    @ConditionalOnProperty(name = "aidji.security.jwt.generation-enabled", havingValue = "true", matchIfMissing = true)
+    public JwtTokenProviderCipm jwtTokenProviderCipm(
+            AidjiSecurityProperties properties) {
+        var cipm = properties.jwt().cipmProperties();
+        log.info("🔐 CIPM JWT Provider initialized (url: {}, issuer: {})", cipm.baseUrl(), cipm.issuer());
+        return new JwtTokenProviderCipm(properties);
     }
 
     @Bean
@@ -96,7 +143,7 @@ public class AidjiSecurityAutoConfiguration {
     @ConditionalOnProperty(name = "aidji.security.jwt.enabled", havingValue = "true", matchIfMissing = true)
     public JwtAuthenticationFilter jwtAuthenticationFilter(
             JwtTokenVerificator jwtTokenVerificator,
-            ObjectProvider<UserDetailsService> userDetailsServiceProvider,
+            ObjectProvider<@NonNull UserDetailsService> userDetailsServiceProvider,
             AidjiSecurityProperties properties) {
 
         UserDetailsService userDetailsService = userDetailsServiceProvider.getIfAvailable(() -> {
@@ -139,8 +186,8 @@ public class AidjiSecurityAutoConfiguration {
             JwtAuthenticationFilter jwtAuthenticationFilter,
             AidjiAccessDeniedHandler accessDeniedHandler,
             AidjiAuthenticationEntryPoint authenticationEntryPoint,
-            ObjectProvider<CorsConfigurationSource> corsConfigurationSource,
-            ObjectProvider<AidjiSecurityCustomizer> customizers) {
+            ObjectProvider<@NonNull CorsConfigurationSource> corsConfigurationSource,
+            ObjectProvider<@NonNull AidjiSecurityCustomizer> customizers) {
 
         String[] whitelist = properties.security().publicPaths().toArray(String[]::new);
 

@@ -19,6 +19,7 @@ package be.aidji.boot.security.jwt;
 import be.aidji.boot.core.exception.SecurityException;
 import be.aidji.boot.core.exception.TechnicalException;
 import be.aidji.boot.security.AidjiSecurityProperties;
+import be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,12 +44,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("JwtTokenVerificator")
-class JwtTokenVerificatorTest {
+class JwtTokenVerificatorCipmTest {
 
     private ClientAndServer mockServer;
     private KeyPair keyPair;
     private final String kid = "test-key-1";
-    private JwtTokenVerificator verificator;
+    private JwtTokenVerificatorCipm verificator;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -68,15 +69,26 @@ class JwtTokenVerificatorTest {
                 .respond(HttpResponse.response().withStatusCode(200).withBody(jwksJson));
 
         // Create verificator
-        AidjiSecurityProperties.JwtProperties jwtProperties = new AidjiSecurityProperties.JwtProperties(
-                "http://localhost:" + port + "/.well-known/jwks.json",
-                3600L,
-                true,
-                "auth-token",
-                600L
+        AidjiSecurityProperties.CipmProperties cipmProperties = new AidjiSecurityProperties.CipmProperties(
+                "http://localhost:" + port,
+                "/.well-known/jwks.json",
+                "/sign-token",
+                "test-token",
+                "test-issuer",
+                3600L
         );
 
-        verificator = new JwtTokenVerificator(jwtProperties);
+        AidjiSecurityProperties.JwtProperties jwtProperties = new AidjiSecurityProperties.JwtProperties(
+                "cipm",
+                false,
+                true,
+                "auth-token",
+                600L,
+                null,
+                cipmProperties
+        );
+
+        verificator = new JwtTokenVerificatorCipm(jwtProperties);
     }
 
     @Nested
