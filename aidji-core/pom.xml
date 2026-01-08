@@ -22,7 +22,7 @@
     <parent>
         <groupId>be.aidji.boot</groupId>
         <artifactId>aidji-parent</artifactId>
-        <version>1.0.7-SNAPSHOT</version>
+        <version>1.0.7</version>
         <relativePath>../aidji-parent/pom.xml</relativePath>
     </parent>
 
