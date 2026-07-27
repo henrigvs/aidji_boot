@@ -25,12 +25,12 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.AntPathMatcher;
@@ -51,6 +51,11 @@ import java.util.Optional;
  *   <li><b>Header-based</b>: Token in Authorization header (Bearer scheme)</li>
  * </ul>
  *
+ * <p>When a {@link UserDetailsService} bean is available, the filter loads user details
+ * from the application's store and uses them as the authentication principal.
+ * When absent (e.g. in DELEGATED mode with an external IdP), the JWT subject is used
+ * directly as the principal and authorities are extracted from the JWT claims.
+ *
  * @see JwtTokenVerificatorCipm
  * @see AidjiSecurityProperties.JwtProperties
  */
@@ -61,13 +66,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenVerificator jwtTokenVerificator;
+    @Nullable
     private final UserDetailsService userDetailsService;
     private final AidjiSecurityProperties properties;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationFilter(
             JwtTokenVerificator jwtTokenVerificator,
-            UserDetailsService userDetailsService,
+            @Nullable UserDetailsService userDetailsService,
             AidjiSecurityProperties properties) {
         this.jwtTokenVerificator = jwtTokenVerificator;
         this.userDetailsService = userDetailsService;
@@ -132,6 +138,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Validates token and sets up Spring Security context.
+     * <p>
+     * If a {@link UserDetailsService} is configured, the user is loaded from the application's
+     * store and used as the principal. Otherwise, the JWT subject is used directly as the
+     * principal (claims-based mode, suitable for DELEGATED / external IdP scenarios).
      */
     private void authenticateToken(String token, HttpServletRequest request) {
         Claims claims = jwtTokenVerificator.validateToken(token);
@@ -142,11 +152,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        Object principal = userDetailsService != null
+                ? userDetailsService.loadUserByUsername(username)
+                : username;
+
         Collection<SimpleGrantedAuthority> authorities = extractAuthorities(claims);
 
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                userDetails,
+                principal,
                 null,
                 authorities
         );

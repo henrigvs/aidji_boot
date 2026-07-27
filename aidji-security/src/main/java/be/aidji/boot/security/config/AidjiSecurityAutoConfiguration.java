@@ -162,12 +162,11 @@ public class AidjiSecurityAutoConfiguration {
             ObjectProvider<@NonNull UserDetailsService> userDetailsServiceProvider,
             AidjiSecurityProperties properties) {
 
-        UserDetailsService userDetailsService = userDetailsServiceProvider.getIfAvailable(() -> {
-            throw new IllegalStateException(
-                    "No UserDetailsService bean found. " +
-                            "Please define a UserDetailsService bean in your application."
-            );
-        });
+        UserDetailsService userDetailsService = userDetailsServiceProvider.getIfAvailable();
+
+        if (userDetailsService == null) {
+            log.info("No UserDetailsService bean found — JWT subject will be used directly as principal (claims-based mode).");
+        }
 
         return new JwtAuthenticationFilter(
                 jwtTokenVerificator,
