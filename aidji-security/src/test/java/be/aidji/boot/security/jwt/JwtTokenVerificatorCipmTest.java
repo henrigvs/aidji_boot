@@ -85,7 +85,8 @@ class JwtTokenVerificatorCipmTest {
                 "auth-token",
                 600L,
                 null,
-                cipmProperties
+                cipmProperties,
+                null
         );
 
         verificator = new JwtTokenVerificatorCipm(jwtProperties);

@@ -85,7 +85,7 @@ class AidjiSecurityPropertiesTest {
         void shouldApplyDefaultCookieName() {
             // Given / When
             var jwtProps = new AidjiSecurityProperties.JwtProperties(
-                    "cipm", true, true, null, null, null, null
+                    "cipm", true, true, null, null, null, null, null
             );
 
             // Then
@@ -97,7 +97,7 @@ class AidjiSecurityPropertiesTest {
         void shouldApplyDefaultCookieNameWhenBlank() {
             // Given / When
             var jwtProps = new AidjiSecurityProperties.JwtProperties(
-                    "cipm", true, true, "  ", null, null, null
+                    "cipm", true, true, "  ", null, null, null, null
             );
 
             // Then
@@ -109,7 +109,7 @@ class AidjiSecurityPropertiesTest {
         void shouldKeepProvidedCookieName() {
             // Given / When
             var jwtProps = new AidjiSecurityProperties.JwtProperties(
-                    "cipm", true, true, "custom-cookie", null, null, null
+                    "cipm", true, true, "custom-cookie", null, null, null, null
             );
 
             // Then
@@ -121,7 +121,7 @@ class AidjiSecurityPropertiesTest {
         void shouldApplyDefaultMaxAge() {
             // Given / When
             var jwtProps = new AidjiSecurityProperties.JwtProperties(
-                    "cipm", true, true, "jwt", null, null, null
+                    "cipm", true, true, "jwt", null, null, null, null
             );
 
             // Then
@@ -133,7 +133,7 @@ class AidjiSecurityPropertiesTest {
         void shouldKeepProvidedMaxAge() {
             // Given / When
             var jwtProps = new AidjiSecurityProperties.JwtProperties(
-                    "cipm", true, true, "jwt", 7200L, null, null
+                    "cipm", true, true, "jwt", 7200L, null, null, null
             );
 
             // Then

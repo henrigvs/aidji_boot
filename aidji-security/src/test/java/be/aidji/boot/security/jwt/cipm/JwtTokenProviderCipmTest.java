@@ -62,7 +62,8 @@ class JwtTokenProviderCipmTest {
                 "auth-token",
                 600L,
                 null,
-                cipmProperties
+                cipmProperties,
+                null
         );
 
         AidjiSecurityProperties securityProperties = new AidjiSecurityProperties(

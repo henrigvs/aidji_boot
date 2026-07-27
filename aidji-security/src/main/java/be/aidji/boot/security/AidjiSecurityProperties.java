@@ -65,6 +65,21 @@ import java.util.List;
  *         - /api/auth/**
  *         - /actuator/health
  * }</pre>
+ *
+ * <p>Example configuration for delegated mode (external IdP via JWKS):</p>
+ * <pre>{@code
+ * aidji:
+ *   security:
+ *     jwt:
+ *       mode: delegated
+ *       cookie-based: true
+ *       cookie-name: jwt-security-principal
+ *       delegated:
+ *         jwks-url: https://keycloak.example.com/realms/myrealm/protocol/openid-connect/certs
+ *         jwks-cache-ttl-seconds: 3600
+ *     public-paths:
+ *       - /actuator/health
+ * }</pre>
  */
 @ConfigurationProperties(prefix = "aidji.security")
 public record AidjiSecurityProperties(
@@ -84,13 +99,15 @@ public record AidjiSecurityProperties(
     /**
      * JWT authentication configuration properties.
      *
-     * @param mode JWT mode: "cipm" for external CIPM service, "standalone" for self-contained JWT
+     * @param mode JWT mode: "cipm" for external CIPM service, "standalone" for self-contained JWT,
+     *             "delegated" for verification-only via any OIDC-compliant JWKS endpoint
      * @param generationEnabled Whether JWT generation is enabled (true = generate + validate, false = validate only)
      * @param cookieBased Use HTTP-only cookie instead of Authorization header
      * @param cookieName Cookie name when cookie-based auth is enabled (defaults to "jwt-security-principal")
      * @param maxAge Cookie max age in seconds (defaults to 3600)
      * @param standalone Standalone mode configuration (for mode="standalone")
      * @param cipmProperties CIPM mode configuration (for mode="cipm")
+     * @param delegated Delegated mode configuration (for mode="delegated")
      */
     public record JwtProperties(
             String mode,
@@ -99,7 +116,8 @@ public record AidjiSecurityProperties(
             String cookieName,
             Long maxAge,
             StandaloneProperties standalone,
-            CipmProperties cipmProperties
+            CipmProperties cipmProperties,
+            DelegatedProperties delegated
     ) {
         public JwtProperties {
             if (cookieName == null || cookieName.isBlank()) {
@@ -169,6 +187,28 @@ public record AidjiSecurityProperties(
         }
         public String getSignTokenUrl() {
             return baseUrl + signTokenUri;
+        }
+    }
+
+    /**
+     * Delegated mode JWT configuration properties.
+     *
+     * <p>Use this mode when authentication is fully delegated to an external OIDC-compliant
+     * Identity Provider (Keycloak, Auth0, Okta, Azure AD, etc.). This module only validates
+     * tokens — it never generates them.</p>
+     *
+     * @param jwksUrl Full URL to the JWKS endpoint of the external IdP
+     *                (e.g., {@code https://keycloak.example.com/realms/myrealm/protocol/openid-connect/certs})
+     * @param jwksCacheTtlSeconds JWKS public key cache TTL in seconds (defaults to 3600)
+     */
+    public record DelegatedProperties(
+            String jwksUrl,
+            long jwksCacheTtlSeconds
+    ) {
+        public DelegatedProperties {
+            if (jwksCacheTtlSeconds <= 0) {
+                jwksCacheTtlSeconds = 3600L;
+            }
         }
     }
 }

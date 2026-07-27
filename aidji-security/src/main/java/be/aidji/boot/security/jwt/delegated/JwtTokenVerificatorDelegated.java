@@ -1,0 +1,305 @@
+/*
+ * Copyright 2025 Henri GEVENOIS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package be.aidji.boot.security.jwt.delegated;
+
+import be.aidji.boot.core.exception.CommonErrorCode;
+import be.aidji.boot.core.exception.TechnicalException;
+import be.aidji.boot.security.AidjiSecurityProperties;
+import be.aidji.boot.security.jwt.JwtTokenVerificator;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.math.BigInteger;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.RSAPublicKeySpec;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static be.aidji.boot.core.exception.SecurityErrorCode.BEARER_TOKEN_EXPIRED;
+import static be.aidji.boot.core.exception.SecurityErrorCode.BEARER_TOKEN_NOT_VALID;
+
+/**
+ * Validates JWT tokens signed by an external Identity Provider using its JWKS endpoint.
+ *
+ * <p>This verificator is used in <strong>delegated mode</strong>: authentication is fully
+ * managed by an external OIDC-compliant IdP (Keycloak, Auth0, Okta, Azure AD, etc.).
+ * This module only validates incoming tokens — it never generates them.</p>
+ *
+ * <p>Public keys are fetched from the configured JWKS URL and cached with a configurable TTL
+ * to avoid repeated HTTP calls. Only native Java APIs are used — no external JSON library required.</p>
+ *
+ * <p>Example configuration:</p>
+ * <pre>{@code
+ * aidji:
+ *   security:
+ *     jwt:
+ *       mode: delegated
+ *       delegated:
+ *         jwks-url: https://keycloak.example.com/realms/myrealm/protocol/openid-connect/certs
+ *         jwks-cache-ttl-seconds: 3600
+ * }</pre>
+ */
+public class JwtTokenVerificatorDelegated implements JwtTokenVerificator {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtTokenVerificatorDelegated.class);
+
+    private final AidjiSecurityProperties.DelegatedProperties delegatedProperties;
+    private final HttpClient httpClient;
+
+    private final Map<String, PublicKey> keyCache = new ConcurrentHashMap<>();
+    private volatile Instant lastFetchTime = Instant.EPOCH;
+
+    public JwtTokenVerificatorDelegated(AidjiSecurityProperties.DelegatedProperties delegatedProperties) {
+        this.delegatedProperties = delegatedProperties;
+
+        if (delegatedProperties == null || delegatedProperties.jwksUrl() == null || delegatedProperties.jwksUrl().isBlank()) {
+            throw new IllegalStateException(
+                    "Delegated properties with a valid jwks-url are required when using delegated mode. " +
+                    "Please configure aidji.security.jwt.delegated.jwks-url in your application properties."
+            );
+        }
+
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
+    }
+
+    /**
+     * Validates a JWT token and returns its claims.
+     *
+     * @param token the raw JWT string
+     * @return the validated claims
+     * @throws be.aidji.boot.core.exception.SecurityException if the token is expired or invalid
+     */
+    @Override
+    public Claims validateToken(String token) {
+        try {
+            String kid = extractKid(token);
+            PublicKey publicKey = getPublicKey(kid);
+
+            return Jwts.parser()
+                    .verifyWith(publicKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            throw new be.aidji.boot.core.exception.SecurityException(BEARER_TOKEN_EXPIRED, "Token expired", e);
+        } catch (JwtException e) {
+            throw new be.aidji.boot.core.exception.SecurityException(BEARER_TOKEN_NOT_VALID, "Invalid token", e);
+        }
+    }
+
+    /**
+     * Checks if a token is valid without throwing exceptions.
+     *
+     * @param token the raw JWT string
+     * @return {@code true} if the token is valid, {@code false} otherwise
+     */
+    @Override
+    public boolean isValid(String token) {
+        try {
+            validateToken(token);
+            return true;
+        } catch (Exception e) {
+            log.debug("Token validation failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Extracts the key ID (kid) from the JWT header using native Base64.
+     */
+    private String extractKid(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length < 2) {
+                throw new IllegalArgumentException("Invalid JWT format");
+            }
+
+            String headerJson = new String(Base64.getUrlDecoder().decode(parts[0]));
+            String kid = extractJsonValue(headerJson, "kid");
+
+            if (kid == null) {
+                throw new IllegalArgumentException("No 'kid' in JWT header");
+            }
+            return kid;
+
+        } catch (Exception e) {
+            throw new be.aidji.boot.core.exception.SecurityException(
+                    BEARER_TOKEN_NOT_VALID, "Cannot extract kid from token", e);
+        }
+    }
+
+    private PublicKey getPublicKey(String kid) {
+        PublicKey cachedKey = keyCache.get(kid);
+        if (cachedKey != null && !isCacheExpired()) {
+            return cachedKey;
+        }
+
+        synchronized (this) {
+            cachedKey = keyCache.get(kid);
+            if (cachedKey != null && !isCacheExpired()) {
+                return cachedKey;
+            }
+            refreshKeyCache();
+        }
+
+        cachedKey = keyCache.get(kid);
+        if (cachedKey == null) {
+            throw new be.aidji.boot.core.exception.SecurityException(
+                    BEARER_TOKEN_NOT_VALID, "Unknown key ID: " + kid);
+        }
+
+        return cachedKey;
+    }
+
+    private boolean isCacheExpired() {
+        return Instant.now().isAfter(lastFetchTime.plusSeconds(delegatedProperties.jwksCacheTtlSeconds()));
+    }
+
+    private void refreshKeyCache() {
+        log.debug("Fetching JWKS from {}", delegatedProperties.jwksUrl());
+
+        try {
+            String jwksJson = fetchJwks();
+            List<Jwk> keys = parseJwks(jwksJson);
+
+            keyCache.clear();
+            for (Jwk jwk : keys) {
+                if ("RSA".equals(jwk.kty()) && ("sig".equals(jwk.use()) || jwk.use() == null)) {
+                    PublicKey publicKey = buildRsaPublicKey(jwk);
+                    keyCache.put(jwk.kid(), publicKey);
+                    log.debug("Cached public key: kid={}, alg={}", jwk.kid(), jwk.alg());
+                }
+            }
+
+            lastFetchTime = Instant.now();
+            log.info("JWKS refreshed from {}, {} keys cached", delegatedProperties.jwksUrl(), keyCache.size());
+
+        } catch (Exception e) {
+            throw new TechnicalException(
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR,
+                    "Failed to fetch JWKS from " + delegatedProperties.jwksUrl(),
+                    e
+            );
+        }
+    }
+
+    private String fetchJwks() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(delegatedProperties.jwksUrl()))
+                .header("Accept", "application/json")
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("JWKS fetch failed with status: " + response.statusCode());
+        }
+
+        return response.body();
+    }
+
+    /**
+     * Parses JWKS JSON using regex — no external library needed.
+     * Works for standard JWKS format from Keycloak, Auth0, Okta, Azure AD, etc.
+     */
+    private List<Jwk> parseJwks(String json) {
+        List<Jwk> keys = new ArrayList<>();
+
+        Pattern keyPattern = Pattern.compile("\\{[^{}]*\"kty\"[^{}]*}");
+        Matcher matcher = keyPattern.matcher(json);
+
+        while (matcher.find()) {
+            String keyJson = matcher.group();
+
+            Jwk jwk = new Jwk(
+                    extractJsonValue(keyJson, "kty"),
+                    extractJsonValue(keyJson, "use"),
+                    extractJsonValue(keyJson, "kid"),
+                    extractJsonValue(keyJson, "alg"),
+                    extractJsonValue(keyJson, "n"),
+                    extractJsonValue(keyJson, "e")
+            );
+
+            if (jwk.kid() != null && jwk.n() != null && jwk.e() != null) {
+                keys.add(jwk);
+            }
+        }
+
+        return keys;
+    }
+
+    /**
+     * Extracts a string value from JSON using regex.
+     */
+    private String extractJsonValue(String json, String key) {
+        Pattern pattern = Pattern.compile("\"" + key + "\"\\s*:\\s*\"([^\"]+)\"");
+        Matcher matcher = pattern.matcher(json);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private PublicKey buildRsaPublicKey(Jwk jwk) {
+        try {
+            BigInteger modulus = new BigInteger(1, Base64.getUrlDecoder().decode(jwk.n()));
+            BigInteger exponent = new BigInteger(1, Base64.getUrlDecoder().decode(jwk.e()));
+
+            RSAPublicKeySpec spec = new RSAPublicKeySpec(modulus, exponent);
+            KeyFactory factory = KeyFactory.getInstance("RSA");
+
+            return factory.generatePublic(spec);
+
+        } catch (Exception e) {
+            throw new TechnicalException(
+                    CommonErrorCode.INTERNAL_ERROR,
+                    "Failed to build RSA public key for kid: " + jwk.kid(),
+                    e
+            );
+        }
+    }
+
+    /**
+     * Simple record to hold JWK data — no Jackson annotations needed.
+     */
+    private record Jwk(
+            String kty,
+            String use,
+            String kid,
+            String alg,
+            String n,
+            String e
+    ) {
+    }
+}

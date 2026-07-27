@@ -24,6 +24,7 @@ import be.aidji.boot.security.jwt.JwtTokenProvider;
 import be.aidji.boot.security.jwt.JwtTokenVerificator;
 import be.aidji.boot.security.jwt.cipm.JwtTokenProviderCipm;
 import be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm;
+import be.aidji.boot.security.jwt.delegated.JwtTokenVerificatorDelegated;
 import be.aidji.boot.security.jwt.stand_alone.JwtTokenProviderStandAlone;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -136,6 +137,21 @@ public class AidjiSecurityAutoConfiguration {
         var cipm = properties.jwt().cipmProperties();
         log.info("🔐 CIPM JWT Provider initialized (url: {}, issuer: {})", cipm.baseUrl(), cipm.issuer());
         return new JwtTokenProviderCipm(properties);
+    }
+
+    // ========== Mode DELEGATED ==========
+
+    /**
+     * Verificator Delegated — validates tokens via any OIDC-compliant JWKS endpoint.
+     * No token generation in this mode.
+     */
+    @Bean
+    @ConditionalOnMissingBean(JwtTokenVerificator.class)
+    @ConditionalOnProperty(name = "aidji.security.jwt.mode", havingValue = "delegated")
+    public JwtTokenVerificatorDelegated jwtTokenVerificatorDelegated(AidjiSecurityProperties properties) {
+        var delegated = properties.jwt().delegated();
+        log.info("🔐 Delegated JWT Verificator initialized (jwks: {})", delegated.jwksUrl());
+        return new JwtTokenVerificatorDelegated(delegated);
     }
 
     @Bean
