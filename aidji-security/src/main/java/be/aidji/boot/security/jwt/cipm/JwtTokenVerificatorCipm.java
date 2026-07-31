@@ -139,7 +139,7 @@ public class JwtTokenVerificatorCipm implements JwtTokenVerificator {
         }
     }
 
-    private PublicKey getPublicKey(String kid) {
+    public PublicKey getPublicKey(String kid) {
         PublicKey cachedKey = keyCache.get(kid);
         if (cachedKey != null && !isCacheExpired()) {
             return cachedKey;
