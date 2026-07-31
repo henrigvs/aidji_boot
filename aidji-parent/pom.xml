@@ -21,7 +21,7 @@
 
     <groupId>be.aidji.boot</groupId>
     <artifactId>aidji-parent</artifactId>
-    <version>1.0.12</version>
+    <version>1.0.13-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Aidji Parent</name>
