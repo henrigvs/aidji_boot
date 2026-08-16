@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 Henri GEVENOIS
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package be.aidji.boot.security.jwt;
 
 import be.aidji.boot.security.AidjiSecurityProperties;
@@ -28,10 +12,12 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -40,6 +26,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -56,6 +43,10 @@ import java.util.Optional;
  * When absent (e.g. in DELEGATED mode with an external IdP), the JWT subject is used
  * directly as the principal and authorities are extracted from the JWT claims.
  *
+ * <p>Authentication failures are delegated to the configured
+ * {@link AuthenticationEntryPoint}, so the response payload format remains under the
+ * control of the consuming application.
+ *
  * @see JwtTokenVerificatorCipm
  * @see AidjiSecurityProperties.JwtProperties
  */
@@ -69,15 +60,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Nullable
     private final UserDetailsService userDetailsService;
     private final AidjiSecurityProperties properties;
+    private final AuthenticationEntryPoint authenticationEntryPoint;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationFilter(
             JwtTokenVerificator jwtTokenVerificator,
             @Nullable UserDetailsService userDetailsService,
-            AidjiSecurityProperties properties) {
+            AidjiSecurityProperties properties,
+            AuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtTokenVerificator = jwtTokenVerificator;
         this.userDetailsService = userDetailsService;
         this.properties = properties;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Override
@@ -91,13 +85,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .filter(_ -> SecurityContextHolder.getContext().getAuthentication() == null)
                     .ifPresent(token -> authenticateToken(token, request));
 
-            filterChain.doFilter(request, response);
-
         } catch (be.aidji.boot.core.exception.SecurityException e) {
             log.debug("JWT authentication failed: {}", e.getMessage());
             SecurityContextHolder.clearContext();
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+            authenticationEntryPoint.commence(request, response,
+                    new BadCredentialsException(e.getMessage(), e));
+            return;
         }
+
+        filterChain.doFilter(request, response);
     }
 
     /**
@@ -122,7 +118,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return Arrays.stream(request.getCookies())
                 .filter(cookie -> properties.jwt().cookieName().equals(cookie.getName()))
                 .map(Cookie::getValue)
-                .filter(value -> !value.isBlank())
+                .filter(value -> value != null && !value.isBlank())
                 .findFirst();
     }
 
@@ -130,7 +126,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader(AUTHORIZATION_HEADER);
 
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
-            return Optional.of(authHeader.substring(BEARER_PREFIX.length()));
+            String token = authHeader.substring(BEARER_PREFIX.length()).trim();
+            return token.isBlank() ? Optional.empty() : Optional.of(token);
         }
 
         return Optional.empty();
@@ -138,10 +135,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Validates token and sets up Spring Security context.
-     * <p>
-     * If a {@link UserDetailsService} is configured, the user is loaded from the application's
-     * store and used as the principal. Otherwise, the JWT subject is used directly as the
-     * principal (claims-based mode, suitable for DELEGATED / external IdP scenarios).
      */
     private void authenticateToken(String token, HttpServletRequest request) {
         Claims claims = jwtTokenVerificator.validateToken(token);
@@ -187,20 +180,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         return authoritiesClaim.stream()
                 .map(this::toAuthority)
+                .flatMap(Optional::stream)
                 .toList();
     }
 
-    private SimpleGrantedAuthority toAuthority(Object authority) {
+    private Optional<SimpleGrantedAuthority> toAuthority(Object authority) {
         if (authority instanceof String str) {
-            return new SimpleGrantedAuthority(str);
+            return Optional.of(new SimpleGrantedAuthority(str));
         }
-        if (authority instanceof java.util.Map<?, ?> map) {
+        if (authority instanceof Map<?, ?> map) {
             Object value = map.get("authority");
             if (value != null) {
-                return new SimpleGrantedAuthority(value.toString());
+                return Optional.of(new SimpleGrantedAuthority(value.toString()));
             }
         }
-        throw new IllegalArgumentException("Invalid authority format: " + authority);
+        log.warn("Ignoring authority with unsupported format: {}", authority);
+        return Optional.empty();
     }
 
     @Override

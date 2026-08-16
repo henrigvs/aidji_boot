@@ -160,7 +160,8 @@ public class AidjiSecurityAutoConfiguration {
     public JwtAuthenticationFilter jwtAuthenticationFilter(
             JwtTokenVerificator jwtTokenVerificator,
             ObjectProvider<@NonNull UserDetailsService> userDetailsServiceProvider,
-            AidjiSecurityProperties properties) {
+            AidjiSecurityProperties properties,
+            AidjiAuthenticationEntryPoint authenticationEntryPoint) {
 
         UserDetailsService userDetailsService = userDetailsServiceProvider.getIfAvailable();
 
@@ -171,7 +172,8 @@ public class AidjiSecurityAutoConfiguration {
         return new JwtAuthenticationFilter(
                 jwtTokenVerificator,
                 userDetailsService,
-                properties
+                properties,
+                authenticationEntryPoint
         );
     }
 
