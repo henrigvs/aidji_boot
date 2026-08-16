@@ -1,6 +1,7 @@
 package be.aidji.boot.security.jwt;
 
 import be.aidji.boot.security.AidjiSecurityProperties;
+import be.aidji.boot.security.handler.AidjiAuthenticationEntryPoint;
 import be.aidji.boot.security.jwt.cipm.JwtTokenVerificatorCipm;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -17,7 +18,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -44,7 +44,7 @@ import java.util.Optional;
  * directly as the principal and authorities are extracted from the JWT claims.
  *
  * <p>Authentication failures are delegated to the configured
- * {@link AuthenticationEntryPoint}, so the response payload format remains under the
+ * {@link AidjiAuthenticationEntryPoint}, so the response payload format remains under the
  * control of the consuming application.
  *
  * @see JwtTokenVerificatorCipm
@@ -60,14 +60,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Nullable
     private final UserDetailsService userDetailsService;
     private final AidjiSecurityProperties properties;
-    private final AuthenticationEntryPoint authenticationEntryPoint;
+    private final AidjiAuthenticationEntryPoint authenticationEntryPoint;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationFilter(
             JwtTokenVerificator jwtTokenVerificator,
             @Nullable UserDetailsService userDetailsService,
             AidjiSecurityProperties properties,
-            AuthenticationEntryPoint authenticationEntryPoint) {
+            AidjiAuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtTokenVerificator = jwtTokenVerificator;
         this.userDetailsService = userDetailsService;
         this.properties = properties;
