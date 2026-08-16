@@ -53,6 +53,9 @@
         <!-- Third-party versions -->
         <lombok.version>1.18.42</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
+
+        <!-- Aidji framework version - MUST match project.version to avoid 1.0.16-SNAPSHOT child resolution bug -->
+        <aidji.framework.version>1.0.16-SNAPSHOT</aidji.framework.version>
     </properties>
 
     <dependencyManagement>
@@ -61,7 +64,7 @@
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-bom</artifactId>
-                <version>${project.version}</version>
+                <version>${aidji.framework.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -177,7 +180,7 @@
                             <manifestEntries>
                                 <Built-By>Aidji</Built-By>
                                 <Implementation-Title>${project.name}</Implementation-Title>
-                                <Implementation-Version>${project.version}</Implementation-Version>
+                                <Implementation-Version>1.0.16-SNAPSHOT</Implementation-Version>
                                 <Implementation-Vendor>Aidji</Implementation-Vendor>
                             </manifestEntries>
                         </archive>

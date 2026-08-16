@@ -40,6 +40,9 @@
         <feign.version>13.5</feign.version>
         <opentelemetry.version>1.44.1</opentelemetry.version>
         <opentelemetry-instrumentation.version>2.10.0</opentelemetry-instrumentation.version>
+
+        <!-- Aidji framework version - MUST match project.version to avoid 1.0.16-SNAPSHOT child resolution bug -->
+        <aidji.framework.version>1.0.16-SNAPSHOT</aidji.framework.version>
     </properties>
 
     <dependencyManagement>
@@ -57,37 +60,37 @@
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-core</artifactId>
-                <version>${project.version}</version>
+                <version>1.0.16-SNAPSHOT</version>
             </dependency>
 
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-web</artifactId>
-                <version>${project.version}</version>
+                <version>1.0.16-SNAPSHOT</version>
             </dependency>
 
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-security</artifactId>
-                <version>${project.version}</version>
+                <version>1.0.16-SNAPSHOT</version>
             </dependency>
 
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-security-webflux</artifactId>
-                <version>${project.version}</version>
+                <version>1.0.16-SNAPSHOT</version>
             </dependency>
 
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-discovery</artifactId>
-                <version>${project.version}</version>
+                <version>1.0.16-SNAPSHOT</version>
             </dependency>
 
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-observability</artifactId>
-                <version>${project.version}</version>
+                <version>1.0.16-SNAPSHOT</version>
             </dependency>
 
             <!-- Feign (standalone, sans Spring Cloud) -->
