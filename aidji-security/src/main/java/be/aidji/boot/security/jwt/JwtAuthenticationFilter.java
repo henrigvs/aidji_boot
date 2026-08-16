@@ -18,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -60,14 +61,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Nullable
     private final UserDetailsService userDetailsService;
     private final AidjiSecurityProperties properties;
-    private final AidjiAuthenticationEntryPoint authenticationEntryPoint;
+    private final AuthenticationEntryPoint authenticationEntryPoint;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationFilter(
             JwtTokenVerificator jwtTokenVerificator,
             @Nullable UserDetailsService userDetailsService,
             AidjiSecurityProperties properties,
-            AidjiAuthenticationEntryPoint authenticationEntryPoint) {
+            AuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtTokenVerificator = jwtTokenVerificator;
         this.userDetailsService = userDetailsService;
         this.properties = properties;

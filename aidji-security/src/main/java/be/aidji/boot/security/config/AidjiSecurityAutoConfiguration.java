@@ -48,7 +48,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
@@ -161,7 +163,7 @@ public class AidjiSecurityAutoConfiguration {
             JwtTokenVerificator jwtTokenVerificator,
             ObjectProvider<@NonNull UserDetailsService> userDetailsServiceProvider,
             AidjiSecurityProperties properties,
-            AidjiAuthenticationEntryPoint authenticationEntryPoint) {
+            AuthenticationEntryPoint authenticationEntryPoint) {
 
         UserDetailsService userDetailsService = userDetailsServiceProvider.getIfAvailable();
 
@@ -180,14 +182,14 @@ public class AidjiSecurityAutoConfiguration {
     // ========== Error Handlers ==========
 
     @Bean
-    @ConditionalOnMissingBean
-    public AidjiAccessDeniedHandler aidjiAccessDeniedHandler() {
+    @ConditionalOnMissingBean(AccessDeniedHandler.class)
+    public AccessDeniedHandler aidjiAccessDeniedHandler() {
         return new AidjiAccessDeniedHandler();
     }
 
     @Bean
-    @ConditionalOnMissingBean
-    public AidjiAuthenticationEntryPoint aidjiAuthenticationEntryPoint() {
+    @ConditionalOnMissingBean(AuthenticationEntryPoint.class)
+    public AuthenticationEntryPoint aidjiAuthenticationEntryPoint() {
         return new AidjiAuthenticationEntryPoint();
     }
 
@@ -200,8 +202,8 @@ public class AidjiSecurityAutoConfiguration {
             HttpSecurity http,
             AidjiSecurityProperties properties,
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            AidjiAccessDeniedHandler accessDeniedHandler,
-            AidjiAuthenticationEntryPoint authenticationEntryPoint,
+            AccessDeniedHandler accessDeniedHandler,
+            AuthenticationEntryPoint authenticationEntryPoint,
             ObjectProvider<@NonNull CorsConfigurationSource> corsConfigurationSource,
             ObjectProvider<@NonNull AidjiSecurityCustomizer> customizers) {
 
@@ -216,9 +218,8 @@ public class AidjiSecurityAutoConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .anonymous(Customizer.withDefaults()) // Enable anonymous authentication for public paths
                 .exceptionHandling(ex -> ex
-                        .accessDeniedHandler(accessDeniedHandler)
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                );
+                        .authenticationEntryPoint(authenticationEntryPoint)   // injecté, pas en dur
+                        .accessDeniedHandler(accessDeniedHandler));
 
         // CORS - use aidji-web config if available
         corsConfigurationSource.ifAvailable(cors ->
