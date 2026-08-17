@@ -21,7 +21,7 @@
 
     <groupId>be.aidji.boot</groupId>
     <artifactId>aidji-parent</artifactId>
-    <version>1.0.16</version>
+    <version>1.0.17-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Aidji Parent</name>
@@ -64,7 +64,7 @@
             <dependency>
                 <groupId>be.aidji.boot</groupId>
                 <artifactId>aidji-bom</artifactId>
-                <version>1.0.16</version>
+                <version>1.0.17-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
